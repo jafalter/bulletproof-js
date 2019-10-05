@@ -9,11 +9,9 @@ An Android application should be implemented, which can receive, store, and send
 After this Milestone, the application should be able to create and recover keys from a seed phrase. And be able to sign transaction slate files (as used in the Grin cryptocurrency) to receive coins.
 
 * **A0**: General Project setup
-* **A1**: Generate a random seed phrase, from which secp256k1 keypairs can be generated.
-* **A2**: Recover previously used keypairs by entering a keyphrase.
-* **A3**: Receive and safely store Grin Coins from a transaction slate delivered as a file via E-Mail. In detail, the application needs to be able to read the data from the data, create a new output coin, and fill the file with the required data, specifically the signature.
-* **A4**: Send back the updated transaction slate via E-Mail.
-* **A5**: Encrypt all data stored on the phone with a password chosen by the user.
+* **A1**: Generate a random seed phrase, from which secp256k1 keypairs can be generated and recovered
+* **A2**: Receive and safely store Grin Coins from a transaction slate delivered as a file via E-Mail. In detail, the application needs to be able to read the data from the data, create a new output coin, and fill the file with the required data, specifically the signature.
+* **A3**: Send back the updated transaction slate via E-Mail.
 
 ### Milestone B
 After this Milestone, the application should be able to initiate Grin transactions. Meaning creating an initial transaction slate, sending it to a user (either via HTTP or e-mail attachment) as well as finalizing a final transaction slate.
