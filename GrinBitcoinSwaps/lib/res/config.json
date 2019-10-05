@@ -1,0 +1,8 @@
+{
+  "database" : {
+    "name" : "nox"
+  },
+  "logger" : {
+    "level" : "debug"
+  }
+}
