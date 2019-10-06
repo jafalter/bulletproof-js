@@ -52,7 +52,7 @@ class Factory {
     }
 
     /**
-     * Database Access Object for the Password Model
+     * Database Access Object for the User Model
      *
      * @return {PasswordDao}
      */

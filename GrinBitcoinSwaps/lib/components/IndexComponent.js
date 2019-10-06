@@ -1,6 +1,7 @@
 import React from "react";
 import { Text } from 'react-native';
 import Factory from "../service/Factory";
+import EnterNewPasswordComp from "./subcomponents/EnterNewPasswordComp";
 
 const logger = Factory.getLogger();
 
@@ -16,7 +17,7 @@ class IndexComponent extends React.Component {
 
     async componentDidMount() {
         try {
-            const pass = await this.passDao.getPassword();
+            const pass = await this.passDao.getPasswordChecksum();
             logger.info(pass);
             const setupNeeded = pass === null;
             if( setupNeeded ) {
@@ -52,8 +53,7 @@ class IndexComponent extends React.Component {
                 msg = 'ready';
                 break;
             case 'setup':
-                msg = 'setup';
-                break;
+                return <EnterNewPasswordComp/>
         }
 
         return <Text>{msg}</Text>

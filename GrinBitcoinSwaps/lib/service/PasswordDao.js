@@ -1,4 +1,4 @@
-import Password from "../model/Password";
+import User from "../model/User";
 
 class PasswordDao {
     /**
@@ -14,16 +14,16 @@ class PasswordDao {
      * Query password info stored locally
      * If no password has been saved yet, will return null
      *
-     * @return {Promise<Password|null>}
+     * @return {Promise<User|null>}
      */
-    async getPassword() {
-        const rs = await this.db.execQuery("SELECT password FROM user;", []);
+    async getPasswordChecksum() {
+        const rs = await this.db.execQuery("SELECT password_checksum FROM user;", []);
         const rows = rs.rows;
         if( rows.length === 0 ) { return null; }
         if( rows.length > 1 ) { throw new Error("Multiple passwords returned"); }
         else {
             this.logger.info("DB response", rs);
-            return Password.fromRow(rows.item(0));
+            return User.fromRow(rows.item(0));
         }
     }
 }

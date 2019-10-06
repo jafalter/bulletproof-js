@@ -1,8 +1,14 @@
+import Environment from "./Environment";
+
 const CONST_CREATE_SQL = `
 CREATE TABLE IF NOT EXISTS user (
     id INT AUTO INCREMENT PRIMARY KEY,
-    password VARCHAR(64)
+    password_checksum VARCHAR(64)
 );
+`;
+
+const CONST_DROP_SQL = `
+DROP TABLE IF EXISTS user;
 `;
 
 class Db {
@@ -21,6 +27,9 @@ class Db {
      * @return {Promise<ResultSet>}
      */
     async setupDatabase() {
+        if( !Environment.isProduction() ) {
+            await this._executeQuery(CONST_DROP_SQL, []);
+        }
         await this._executeQuery(CONST_CREATE_SQL, []);
         this.isSetup = true;
     }
