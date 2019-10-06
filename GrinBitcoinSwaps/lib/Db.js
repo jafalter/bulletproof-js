@@ -15,10 +15,12 @@ class Db {
 
     /**
      * @param conn {WebSQLDatabase}
+     * @param logger {Logger}
      */
-    constructor(conn) {
+    constructor(conn, logger) {
         this.conn = conn;
         this.isSetup = false;
+        this.logger = logger;
     }
 
     /**
@@ -27,7 +29,8 @@ class Db {
      * @return {Promise<ResultSet>}
      */
     async setupDatabase() {
-        if( !Environment.isProduction() ) {
+        if( !Environment.isProduction() && !process.env.PERSIST ) {
+            this.logger.warn("Dropping old DB data");
             await this._executeQuery(CONST_DROP_SQL, []);
         }
         await this._executeQuery(CONST_CREATE_SQL, []);

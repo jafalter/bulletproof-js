@@ -46,7 +46,7 @@ class Factory {
      */
     static getDBObject() {
         if( db === null ) {
-            db = new Db(Factory.getDBConnection());
+            db = new Db(Factory.getDBConnection(), this.getLogger());
         }
         return db;
     }

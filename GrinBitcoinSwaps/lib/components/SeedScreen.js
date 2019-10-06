@@ -17,4 +17,4 @@ class SeedScreen extends React.Component {
     }
 }
 
-export default SeedScreen
+export default SeedScreen;

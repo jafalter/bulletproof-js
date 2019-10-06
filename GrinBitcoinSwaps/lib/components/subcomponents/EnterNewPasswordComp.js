@@ -1,7 +1,7 @@
 import React from "react";
 import {Button, Text, TextInput, View} from "react-native";
 import {StyleSheet} from "react-native";
-import { withNavigation } from 'react-navigation';
+import commonStyles from "../../res/commonStyles";
 
 import Factory from "../../Factory";
 
@@ -27,7 +27,7 @@ class EnterNewPasswordComp extends React.Component {
             {this.state.error ? <Text style={styles.error}>{this.state.error}</Text> : null}
             <TextInput placeholder="Password" autoCompleteType="password" secureTextEntry={true} value={this.state.pass} onChangeText={(txt) => { this.setState({pass : txt}); }} />
             <Text style={styles.note}>{pass_desc}</Text>
-            <Button title="Submit" onPress={async () => { await this.onSubmitClick(); } } />
+            <Button style={commonStyles.button} title="Submit"onPress={async () => { await this.onSubmitClick(); } } />
         </View>;
     }
 
@@ -37,16 +37,14 @@ class EnterNewPasswordComp extends React.Component {
      * @return {Promise<void>}
      */
     async onSubmitClick() {
-        const {navigate} = this.props.navigation;
-
-        if( this.state.pass.length <= 10 ) {
+        if( this.state.pass.length < 10 ) {
             logger.info("Password did not fullfill requirements " + this.state.pass);
             this.setState({ error : 'Minimum length of 10 characters required'});
         }
         else {
             await this.userDao.setPasswordChecksum(this.state.pass);
             // Key
-            navigate('SeedScreen');
+            this.props.handler('status', 'ready');
         }
     }
 }
@@ -67,12 +65,9 @@ const styles = StyleSheet.create({
   input : {
       padding: 5
   },
-  btn : {
-      width : '50%'
-  },
   error : {
       color : 'red'
   }
 });
 
-export default withNavigation(EnterNewPasswordComp);
+export default EnterNewPasswordComp;

@@ -10,7 +10,7 @@ class Crypto {
      * @param input {string} the input as a string
      * @return {string} 64 character long string
      */
-    static keccakHash(input) {
+    static keccakSaltedHash(input) {
         return keccak256(CHECKSUM_SALT + input);
     }
 }

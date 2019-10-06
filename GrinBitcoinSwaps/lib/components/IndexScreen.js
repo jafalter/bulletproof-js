@@ -2,6 +2,9 @@ import React from "react";
 import {StyleSheet, Text, View} from 'react-native';
 import Factory from "../Factory";
 import EnterNewPasswordComp from "./subcomponents/EnterNewPasswordComp";
+import UnlockScreen from "./UnlockScreen";
+import SeedScreen from "./SeedScreen";
+import commonStyles from "../res/commonStyles";
 
 const logger = Factory.getLogger();
 
@@ -11,15 +14,27 @@ class IndexScreen extends React.Component {
         super(props);
         this.userDao = Factory.getUserDao();
         this.state = {
-            status: 'initializing'
-        }
+            status: 'initializing',
+            unlocked: false
+        };
+    }
+
+    /**
+     * Function to change state by child components
+     *
+     * @param key {string} state key
+     * @param val {string} state value
+     */
+    handler(key, val) {
+        this.setState({
+            [key] : val
+        })
     }
 
     async componentDidMount() {
         try {
-            const pass = await this.userDao.getPasswordChecksum();
-            logger.info(pass);
-            const setupNeeded = pass === null;
+            const user = await this.userDao.getUserData();
+            const setupNeeded = user === null;
             if( setupNeeded ) {
                 this.setState({
                     status : 'setup'
@@ -50,10 +65,14 @@ class IndexScreen extends React.Component {
                 msg = 'corrupted';
                 break;
             case 'ready':
-                msg = 'ready';
-                break;
+                if( this.state.unlocked ) {
+                    return <View style={commonStyles.container}><SeedScreen /></View>
+                }
+                else {
+                    return <View style={commonStyles.container}><UnlockScreen handler={this.handler.bind(this)} /></View>
+                }
             case 'setup':
-                return <View style={styles.container}><EnterNewPasswordComp /></View>
+                return <View style={commonStyles.container}><EnterNewPasswordComp handler={this.handler.bind(this)} /></View>
         }
 
         return <Text>{msg}</Text>
