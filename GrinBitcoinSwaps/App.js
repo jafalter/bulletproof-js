@@ -1,23 +1,14 @@
-import React, { Component } from 'react';
-import { StyleSheet, View } from 'react-native';
-import IndexComponent from "./lib/components/IndexComponent";
+import React from 'react';
+import IndexScreen from "./lib/components/IndexScreen";
+import {createAppContainer} from 'react-navigation';
+import {createStackNavigator} from 'react-navigation-stack';
+import SeedScreen from "./lib/components/SeedScreen";
 
-export default class App extends Component {
-
-  render() {
-    return (
-      <View style={styles.container}>
-        <IndexComponent/>
-      </View>
-    );
-  }
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5FCFF',
-  }
+const MainNavigator = createStackNavigator({
+    IndexScreen: { screen: IndexScreen },
+    SeedScreen: { screen: SeedScreen }
 });
+
+const App = createAppContainer(MainNavigator);
+
+export default App;

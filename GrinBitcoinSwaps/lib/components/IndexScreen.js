@@ -1,15 +1,15 @@
 import React from "react";
-import { Text } from 'react-native';
-import Factory from "../service/Factory";
+import {StyleSheet, Text, View} from 'react-native';
+import Factory from "../Factory";
 import EnterNewPasswordComp from "./subcomponents/EnterNewPasswordComp";
 
 const logger = Factory.getLogger();
 
-class IndexComponent extends React.Component {
+class IndexScreen extends React.Component {
 
     constructor(props) {
         super(props);
-        this.passDao = Factory.getPasswordDao();
+        this.userDao = Factory.getUserDao();
         this.state = {
             status: 'initializing'
         }
@@ -17,7 +17,7 @@ class IndexComponent extends React.Component {
 
     async componentDidMount() {
         try {
-            const pass = await this.passDao.getPasswordChecksum();
+            const pass = await this.userDao.getPasswordChecksum();
             logger.info(pass);
             const setupNeeded = pass === null;
             if( setupNeeded ) {
@@ -53,11 +53,20 @@ class IndexComponent extends React.Component {
                 msg = 'ready';
                 break;
             case 'setup':
-                return <EnterNewPasswordComp/>
+                return <View style={styles.container}><EnterNewPasswordComp /></View>
         }
 
         return <Text>{msg}</Text>
     }
 }
 
-export default IndexComponent;
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F5FCFF',
+    }
+});
+
+export default IndexScreen;

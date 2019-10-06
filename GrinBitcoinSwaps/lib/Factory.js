@@ -1,9 +1,9 @@
 import Db from "./Db";
-const cnf = require('./../res/config');
+const cnf = require('./res/config');
 
 import * as SQLite from 'expo-sqlite';
-import PasswordDao from "./PasswordDao";
-import Logger from "../Logger";
+import UserDao from "./service/UserDao";
+import Logger from "./Logger";
 
 let db = null;
 let logger = null;
@@ -54,10 +54,10 @@ class Factory {
     /**
      * Database Access Object for the User Model
      *
-     * @return {PasswordDao}
+     * @return {UserDao}
      */
-    static getPasswordDao() {
-        return new PasswordDao(Factory.getDBObject(), Factory.getLogger());
+    static getUserDao() {
+        return new UserDao(Factory.getDBObject(), Factory.getLogger());
     }
 }
 

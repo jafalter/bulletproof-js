@@ -1,14 +1,20 @@
 import React from "react";
 import {Button, Text, TextInput, View} from "react-native";
-import style from "../../res/styles";
+import {StyleSheet} from "react-native";
+import { withNavigation } from 'react-navigation';
+
+import Factory from "../../Factory";
 
 const pass_label = "Choose a secure password";
 const pass_desc = "Minimum 10 characters. Keep the password secure and save!";
+
+const logger = Factory.getLogger();
 
 class EnterNewPasswordComp extends React.Component {
 
     constructor(props) {
         super(props);
+        this.userDao = Factory.getUserDao();
         this.state = {
             pass : '',
             error : false
@@ -21,18 +27,31 @@ class EnterNewPasswordComp extends React.Component {
             {this.state.error ? <Text style={styles.error}>{this.state.error}</Text> : null}
             <TextInput placeholder="Password" autoCompleteType="password" secureTextEntry={true} value={this.state.pass} onChangeText={(txt) => { this.setState({pass : txt}); }} />
             <Text style={styles.note}>{pass_desc}</Text>
-            <Button title="Submit" type="outline" onPress={() => { this.onSubmitClick(); } } />
+            <Button title="Submit" onPress={async () => { await this.onSubmitClick(); } } />
         </View>;
     }
 
-    onSubmitClick() {
+    /**
+     * Onclick handler for the submit button
+     *
+     * @return {Promise<void>}
+     */
+    async onSubmitClick() {
+        const {navigate} = this.props.navigation;
+
         if( this.state.pass.length <= 10 ) {
+            logger.info("Password did not fullfill requirements " + this.state.pass);
             this.setState({ error : 'Minimum length of 10 characters required'});
+        }
+        else {
+            await this.userDao.setPasswordChecksum(this.state.pass);
+            // Key
+            navigate('SeedScreen');
         }
     }
 }
 
-const styles = {
+const styles = StyleSheet.create({
   container : {
       textAlign : 'center',
   },
@@ -46,7 +65,7 @@ const styles = {
       textAlign: 'center'
   },
   input : {
-      color : style.txtcolor
+      padding: 5
   },
   btn : {
       width : '50%'
@@ -54,6 +73,6 @@ const styles = {
   error : {
       color : 'red'
   }
-};
+});
 
-export default EnterNewPasswordComp;
+export default withNavigation(EnterNewPasswordComp);
