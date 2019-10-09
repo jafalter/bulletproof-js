@@ -1,4 +1,5 @@
 const keccak256 = require('js-sha3').keccak256;
+import bip39 from 'react-native-bip39'
 
 const CHECKSUM_SALT = `&q!phF&jH#pJ.#dmaTd:gJ$etm|ci,?r%vz&]Ad(L^><g.)C)E"PJK?DAZ("FU*T`;
 const PASSPHRASE_SALT = `|Z#kUQ,=l..9V&cMgluJ6py+s@3M;RQ&dLp@G|bg#hMOc/~yI+"%||P8wjzn$rtf`;
@@ -25,6 +26,21 @@ class Crypto {
      */
     static keccakSaltedHash(input) {
         return keccak256(CHECKSUM_SALT + input);
+    }
+
+    /**
+     * Generate a new bip39 mnemonic seed phrase from
+     * which we can generate private keys
+     *
+     * @return {string}
+     */
+    static async genereteMnemonic() {
+        bip39.setDefaultWordlist('english');
+        try {
+            return await bip39.generateMnemonic(256) // default to 128
+        } catch(e) {
+            return false
+        }
     }
 }
 
