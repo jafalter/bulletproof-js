@@ -1,11 +1,12 @@
 const keccak256 = require('js-sha3').keccak256;
+import bip39 from 'react-native-bip39'
 
 const CHECKSUM_SALT = `&q!phF&jH#pJ.#dmaTd:gJ$etm|ci,?r%vz&]Ad(L^><g.)C)E"PJK?DAZ("FU*T`;
 const PASSPHRASE_SALT = `|Z#kUQ,=l..9V&cMgluJ6py+s@3M;RQ&dLp@G|bg#hMOc/~yI+"%||P8wjzn$rtf`;
 
 let encryptionKey = ''; // Passphrase used for encryption
 
-class Crypto {
+class Ncrypto {
 
     /**
      * Set the symetric key used for encryption and decryption of local data
@@ -34,14 +35,13 @@ class Crypto {
      * @return {string}
      */
     static async genereteMnemonic() {
-        //bip39.setDefaultWordlist('english');
+        bip39.setDefaultWordlist('english');
         try {
-            return null;
-            //return await bip39.generateMnemonic(256) // default to 128
+            return await bip39.generateMnemonic(256) // default to 128
         } catch(e) {
             return false
         }
     }
 }
 
-export default Crypto;
+export default Ncrypto;

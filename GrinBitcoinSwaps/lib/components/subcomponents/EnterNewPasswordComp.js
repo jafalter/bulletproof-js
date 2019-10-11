@@ -4,7 +4,7 @@ import {StyleSheet} from "react-native";
 import commonStyles from "../../res/commonStyles";
 
 import Factory from "../../Factory";
-import Crypto from "../../Crypto";
+import Ncrypto from "../../Ncrypto";
 
 const pass_label = "Choose a secure password";
 const pass_desc = "Minimum 10 characters. Keep the password secure and save!";
@@ -28,7 +28,7 @@ class EnterNewPasswordComp extends React.Component {
             {this.state.error ? <Text style={styles.error}>{this.state.error}</Text> : null}
             <TextInput placeholder="Password" autoCompleteType="password" secureTextEntry={true} value={this.state.pass} onChangeText={(txt) => { this.setState({pass : txt}); }} />
             <Text style={styles.note}>{pass_desc}</Text>
-            <Button style={commonStyles.button} title="Submit"onPress={async () => { await this.onSubmitClick(); } } />
+            <Button style={commonStyles.button} title="Submit" onPress={async () => { await this.onSubmitClick(); } } />
         </View>;
     }
 
@@ -44,7 +44,7 @@ class EnterNewPasswordComp extends React.Component {
         }
         else {
             await this.userDao.setPasswordChecksum(this.state.pass);
-            Crypto.setPassphrase(this.state.pass);
+            Ncrypto.setPassphrase(this.state.pass);
             this.props.handler('status', 'ready');
         }
     }
