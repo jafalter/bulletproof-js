@@ -4,7 +4,7 @@ import {StyleSheet} from "react-native";
 import commonStyles from "../../res/commonStyles";
 
 import Factory from "../../Factory";
-import Crypto from "../../Crypto";
+import GBCrypto from "../../GBCrypto";
 
 const pass_label = "Choose a secure password";
 const pass_desc = "Minimum 10 characters. Keep the password secure and save!";
@@ -44,7 +44,7 @@ class EnterNewPasswordComp extends React.Component {
         }
         else {
             await this.userDao.setPasswordChecksum(this.state.pass);
-            Crypto.setPassphrase(this.state.pass);
+            GBCrypto.setPassphrase(this.state.pass);
             this.props.handler('status', 'ready');
         }
     }
