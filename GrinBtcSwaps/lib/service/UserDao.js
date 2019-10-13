@@ -51,6 +51,17 @@ class UserDao {
         this.logger.info("New checksum " + checksum);
         await this.db.execQuery('INSERT OR REPLACE INTO user(id, password_checksum) VALUES(?,?);', [1, checksum]);
     }
+
+    /**
+     * Seed the seed from which keys will
+     * be derived
+     *
+     * @param seed
+     * @return {Promise<void>}
+     */
+    async setSeed(seed) {
+        await this.db.execQuery('UPDATE user SET seed = ?', [seed]);
+    }
 }
 
 export default UserDao;

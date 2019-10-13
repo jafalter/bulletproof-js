@@ -5,6 +5,7 @@ const CHECKSUM_SALT = `&q!phF&jH#pJ.#dmaTd:gJ$etm|ci,?r%vz&]Ad(L^><g.)C)E"PJK?DA
 const PASSPHRASE_SALT = `|Z#kUQ,=l..9V&cMgluJ6py+s@3M;RQ&dLp@G|bg#hMOc/~yI+"%||P8wjzn$rtf`;
 
 let encryptionKey = ''; // Passphrase used for encryption
+const algorithm = 'aes-256-ctr';
 
 class GBCrypto {
 
@@ -40,6 +41,17 @@ class GBCrypto {
         } catch(e) {
             return false
         }
+    }
+
+    /**
+     * Get a hexadecimal encoded seed which can be used
+     * to generate keys from a mnmemonic phrase
+     *
+     * @param mnemonic {string}
+     * @return {string}
+     */
+    static seedFromMnemonic(mnemonic) {
+        return bip39.mnemonicToSeedHex(mnemonic)
     }
 }
 

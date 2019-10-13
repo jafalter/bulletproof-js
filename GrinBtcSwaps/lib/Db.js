@@ -3,7 +3,8 @@ import Environment from "./Environment";
 const CONST_CREATE_SQL = `
 CREATE TABLE IF NOT EXISTS user (
     id INT PRIMARY KEY,
-    password_checksum VARCHAR(64)
+    password_checksum VARCHAR(64),
+    seed TEXT
 );
 `;
 

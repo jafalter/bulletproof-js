@@ -15,15 +15,12 @@ class SeedScreen extends React.Component {
     }
 
     onClickActionBtn(type) {
-        console.log("btn click");
         if ("recover" === type) {
-            console.log("Starting recover");
             this.setState({
                 status: 'recover'
             });
         }
         else if ("generate" === type) {
-            console.log("Starting gen");
             this.setState({
                 status: 'generate'
             });
@@ -32,7 +29,10 @@ class SeedScreen extends React.Component {
 
     async generateSeedPhrase() {
         const phrase = await GBCrypto.genereteMnemonic();
+        const seed = GBCrypto.seedFromMnemonic(phrase);
         console.log(phrase);
+        console.log(seed);
+        await this.userDao.setSeed(seed);
         this.setState({
             phrase: phrase
         });
