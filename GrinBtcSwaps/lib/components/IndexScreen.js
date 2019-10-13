@@ -5,6 +5,7 @@ import EnterNewPasswordComp from "./subcomponents/EnterNewPasswordComp";
 import UnlockScreen from "./UnlockScreen";
 import SeedScreen from "./SeedScreen";
 import commonStyles from "../res/commonStyles";
+import MainScreen from "./MainScreen";
 
 const logger = Factory.getLogger();
 
@@ -15,7 +16,8 @@ class IndexScreen extends React.Component {
         this.userDao = Factory.getUserDao();
         this.state = {
             status: 'initializing',
-            unlocked: false
+            unlocked: false,
+            seed: null
         };
     }
 
@@ -34,6 +36,7 @@ class IndexScreen extends React.Component {
     async componentDidMount() {
         try {
             const user = await this.userDao.getUserData();
+            console.log(user);
             const setupNeeded = user === null;
             if( setupNeeded ) {
                 this.setState({
@@ -42,7 +45,8 @@ class IndexScreen extends React.Component {
             }
             else {
                 this.setState({
-                    status : 'ready'
+                    status : 'ready',
+                    seed: user.seed
                 })
             }
         } catch (e) {
@@ -66,7 +70,12 @@ class IndexScreen extends React.Component {
                 break;
             case 'ready':
                 if( this.state.unlocked ) {
-                    return <View style={commonStyles.container}><SeedScreen /></View>
+                    if( !this.state.seed ) {
+                        return <View style={commonStyles.container}><SeedScreen handler={this.handler.bind(this)} /></View>
+                    }
+                    else {
+                        return <MainScreen/>
+                    }
                 }
                 else {
                     return <View style={commonStyles.container}><UnlockScreen handler={this.handler.bind(this)} /></View>

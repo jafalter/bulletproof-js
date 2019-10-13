@@ -60,7 +60,7 @@ class UserDao {
      * @return {Promise<void>}
      */
     async setSeed(seed) {
-        await this.db.execQuery('UPDATE user SET seed = ?', [seed]);
+        await this.db.execQuery('UPDATE user SET seed = ? WHERE id = 1;', [seed]);
     }
 }
 

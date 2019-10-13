@@ -9,7 +9,8 @@ class SeedScreen extends React.Component {
         super(props);
         this.state = {
             status: 'init',
-            phrase: ''
+            phrase: '',
+            seed: null
         };
         this.userDao = Factory.getUserDao();
     }
@@ -25,18 +26,21 @@ class SeedScreen extends React.Component {
                 status: 'generate'
             });
         }
+        else if ("done" === type) {
+            this.props.handler('seed', this.state.seed);
+        }
     }
 
     async generateSeedPhrase() {
         const phrase = await GBCrypto.genereteMnemonic();
         const seed = GBCrypto.seedFromMnemonic(phrase);
-        console.log(phrase);
-        console.log(seed);
         await this.userDao.setSeed(seed);
         this.setState({
-            phrase: phrase
+            phrase: phrase,
+            seed: seed
         });
     }
+
 
     render() {
         switch (this.state.status) {
@@ -55,9 +59,11 @@ class SeedScreen extends React.Component {
                     <Text>Lets go</Text>
                 </View>;
             case "generate":
-                return <View><Button title='Generate' onPress={async () => {
-                    await this.generateSeedPhrase()
-                }}/><Text>{this.state.phrase}</Text>
+                return <View>
+                    {this.state.phrase === '' && <Button title='Generate' onPress={async () => { await this.generateSeedPhrase()} }/>}
+                    {this.state.phrase !== '' && <Text>Write down this backup phrase in a save location!</Text>}
+                    <Text>{this.state.phrase}</Text>
+                    {this.state.phrase !== '' && <Button title='Done' onPress={async () => { this.onClickActionBtn('done')} }/>}
                 </View>;
         }
     }
