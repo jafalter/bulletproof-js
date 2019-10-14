@@ -9,8 +9,6 @@ const CHECKSUM_SALT = `&q!phF&jH#pJ.#dmaTd:gJ$etm|ci,?r%vz&]Ad(L^><g.)C)E"PJK?DA
 const PASSPHRASE_SALT = `|Z#kUQ,=l..9V&cMgluJ6py+s@3M;RQ&dLp@G|bg#hMOc/~yI+"%||P8wjzn$rtf`;
 const IV_SALT = `($/.t|3Ko6Afglxsw0PaBbr[]%=iN*v[`;
 
-const logger = Factory.getLogger();
-
 let symmetricKey = null; // Key used for symmetric encryption
 let iv = null;
 
@@ -57,7 +55,6 @@ class GBCrypto {
         try {
             return await bip39.generateMnemonic(256) // default to 128
         } catch(e) {
-            logger.error("Error during bip39 generation " + e.message);
             return false;
         }
     }

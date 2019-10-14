@@ -36,7 +36,6 @@ class IndexScreen extends React.Component {
     async componentDidMount() {
         try {
             const user = await this.userDao.getUserData();
-            console.log(user);
             const setupNeeded = user === null;
             if( setupNeeded ) {
                 this.setState({
