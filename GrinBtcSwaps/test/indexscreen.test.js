@@ -15,8 +15,18 @@ jest.mock('react-native-sqlite-storage', () => "sqlite");
 
 describe('tests for the IndexScreen component', () => {
 
-     test('Should render SetNewPasswordScreen', () => {
-         const tree = renderer.create(<IndexScreen/>).toJSON();
-         console.log(tree);
+     test('Should render SetNewPasswordScreen', (done) => {
+         const tree = renderer.create(<IndexScreen/>);
+         setTimeout(() => {
+             const json = tree.toJSON();
+             console.log(tree);
+             done();
+         }, 5000);
      });
+
+    test('Should render SetNewPasswordScreen', async () => {
+        const tree = await renderer.create(<IndexScreen/>);
+        const json = tree.toJSON();
+        // expect stuff
+    });
 });

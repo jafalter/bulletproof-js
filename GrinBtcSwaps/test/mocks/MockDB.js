@@ -1,9 +1,6 @@
-import Db from "../../lib/Db";
-
-class MockDB extends Db {
+class MockDB {
 
     constructor() {
-        super(null,null);
         this.queryStack = [];
     }
 
