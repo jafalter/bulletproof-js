@@ -24,9 +24,9 @@ class EnterNewPasswordComp extends React.Component {
 
     render() {
         return <View>
-            <Text style={styles.label}>{pass_label}</Text>
+            <Text style={commonStyles.txth1}>{pass_label}</Text>
             {this.state.error ? <Text style={styles.error}>{this.state.error}</Text> : null}
-            <TextInput placeholder="Password" autoCompleteType="password" secureTextEntry={true} value={this.state.pass} onChangeText={(txt) => { this.setState({pass : txt}); }} />
+            <TextInput style={styles.input} placeholder="Password" autoCompleteType="password" secureTextEntry={true} value={this.state.pass} onChangeText={(txt) => { this.setState({pass : txt}); }} />
             <Text style={styles.note}>{pass_desc}</Text>
             <Button style={commonStyles.button} title="Submit"onPress={async () => { await this.onSubmitClick(); } } />
         </View>;
@@ -56,7 +56,8 @@ const styles = StyleSheet.create({
   },
   label : {
       fontSize: 20,
-      textAlign: 'center'
+      textAlign: 'center',
+      marginBottom: '10%'
   },
   note : {
       fontSize: 12,
@@ -64,10 +65,11 @@ const styles = StyleSheet.create({
       textAlign: 'center'
   },
   input : {
-      padding: 5
+      alignSelf: 'stretch',
   },
   error : {
-      color : 'red'
+      color : 'red',
+      textAlign : 'center'
   }
 });
 

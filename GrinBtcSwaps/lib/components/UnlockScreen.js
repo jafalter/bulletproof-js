@@ -27,8 +27,8 @@ class UnlockScreen extends React.Component {
     }
 
     render() {
-        return <View style={commonStyles.container}>
-            <Text>Unlock your application</Text>
+        return <View style={commonStyles.defaultWidth}>
+            <Text style={commonStyles.txth1} >Unlock your application</Text>
             { this.state.error ? <Text style={styles.error}>{this.state.error}</Text> : null}
             <TextInput placeholder="Password" autoCompleteType="password" secureTextEntry={true} value={this.state.pass} onChangeText={(txt) => { this.setState({pass : txt}); }} />
             <Button title="Submit" style={commonStyles.button} onPress={async () => { await this.onSubmitClick(); } } />

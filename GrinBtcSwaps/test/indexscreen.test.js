@@ -24,9 +24,4 @@ describe('tests for the IndexScreen component', () => {
          }, 5000);
      });
 
-    test('Should render SetNewPasswordScreen', async () => {
-        const tree = await renderer.create(<IndexScreen/>);
-        const json = tree.toJSON();
-        // expect stuff
-    });
 });

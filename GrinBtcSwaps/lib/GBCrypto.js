@@ -71,6 +71,17 @@ class GBCrypto {
     }
 
     /**
+     * Validate a Mnemonic seed
+     *
+     * @param mnemonic {string} mnemonic seed as string
+     * @return {boolean} true if valid false otherwise
+     */
+    static validateSeed(mnemonic) {
+        console.log("Validating: " + mnemonic);
+        return bip39.validateMnemonic(mnemonic);
+    }
+
+    /**
      * AES encrypt a message with the key derived from
      * the users locking password. Fails if no key
      * has been set yet.
