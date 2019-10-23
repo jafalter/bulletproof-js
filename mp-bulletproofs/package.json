@@ -1,0 +1,17 @@
+{
+  "name": "mp-bulletproofs",
+  "version": "0.0.0",
+  "description": "Implementation of a multiparty bulletproof protocol",
+  "main": "mpbulletproof.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "Cryptography"
+  ],
+  "author": "Jakob Abfalter",
+  "license": "ISC",
+  "dependencies": {
+    "elliptic": "^6.5.1"
+  }
+}
