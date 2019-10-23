@@ -1,5 +1,5 @@
 import User from "../model/User";
-import Crypto from "../Crypto";
+import GBCrypto from "../GBCrypto";
 
 class UserDao {
     /**
@@ -35,7 +35,7 @@ class UserDao {
      * @return {Promise<boolean>}
      */
     async checkChecksum(password) {
-        const checksum = Crypto.keccakSaltedHash(password);
+        const checksum = GBCrypto.keccakSaltedHash(password);
         const data = await this.getUserData();
         return checksum === data.checksum;
     }
@@ -47,9 +47,20 @@ class UserDao {
      * @return {Promise<void>}
      */
     async setPasswordChecksum(password) {
-        const checksum = Crypto.keccakSaltedHash(password);
+        const checksum = GBCrypto.keccakSaltedHash(password);
         this.logger.info("New checksum " + checksum);
         await this.db.execQuery('INSERT OR REPLACE INTO user(id, password_checksum) VALUES(?,?);', [1, checksum]);
+    }
+
+    /**
+     * Seed the seed from which keys will
+     * be derived
+     *
+     * @param seed
+     * @return {Promise<void>}
+     */
+    async setSeed(seed) {
+        await this.db.execQuery('UPDATE user SET seed = ? WHERE id = 1;', [seed]);
     }
 }
 

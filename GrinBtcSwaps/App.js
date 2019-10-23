@@ -3,6 +3,7 @@ import IndexScreen from "./lib/components/IndexScreen";
 import {createAppContainer} from 'react-navigation';
 import {createStackNavigator} from 'react-navigation-stack';
 import SeedScreen from "./lib/components/SeedScreen";
+import './shim.js'
 
 const MainNavigator = createStackNavigator({
     IndexScreen: { screen: IndexScreen },
