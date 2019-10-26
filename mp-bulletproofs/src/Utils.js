@@ -29,10 +29,11 @@ class Utils {
     }
 
     /**
-     * Mulitply two vectors
+     * Mulitply two vectors with a bigint result
      *
      * @param v1 {array} must only contain bigints
      * @param v2 {array} must only contain bigints
+     * @return {bigint} the result of the multiplication
      */
     static vecMult(v1, v2) {
         let result = 0n;

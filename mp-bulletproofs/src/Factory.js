@@ -1,5 +1,7 @@
-const Utils = require('./Utils');
 const assert = require('assert');
+
+const Utils = require('./Utils');
+const Vector = require('./Vector');
 
 class Factory {
 
@@ -36,38 +38,65 @@ class Factory {
         const binary = val.toString(2);
 
         // Vector 1 contains the value in binary
-        const vec1 = [];
+        const vec1 = new Vector();
         for( let i = binary.length -1; i >= 0; i-- ) {
             const v = binary[i];
-            vec1.push(BigInt(v))
+            vec1.addElem(BigInt(v))
         }
 
         // Vector 2 contains powers of 2 up to our upper bound
-        const vec2 = [];
+        const vec2 = new Vector();
         let pow = 0n;
         while ((2n ** pow) <= upBound) {
-            vec2.push(2n ** pow);
+            vec2.addElem(2n ** pow);
             pow++;
         }
-        if( doAssert ) assert(vec1.length <= vec2.length, "Vector 1 length can't be greater then vec2");
-        while ( vec1.length < vec2.length ) {
-            vec1.push(0n);
+        const n = BigInt(vec2.length());
+        if( doAssert ) assert(vec1.length() <= vec2.length(), "Vector 1 length can't be greater then vec2");
+        while ( vec1.length() < vec2.length() ) {
+            vec1.addElem(0n);
         }
-        if( doAssert ) assert(vec1.length === vec2.length, "Vectors now have to be same length");
+        if( doAssert ) assert(vec1.length() === vec2.length(), "Vectors now have to be same length");
         // Now val can be represented as val = < vec1, vec2 >
-        if( doAssert ) assert(Utils.vecMult(vec1, vec2) === val, "Now val has t obe < vec1, vec2 >");
+        if( doAssert ) assert(vec1.multVector(vec2) === val, "Now val has t obe < vec1, vec2 >");
 
         // To match notation with reference
         const a_L = vec1;
-        const a_R = Utils.vecSubScalar(vec1, 1n);
-        if( doAssert ) assert(Utils.vecMult(a_L, a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
+        const a_R = vec1.substract(1n);
+        if( doAssert ) assert(a_L.multVector(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
 
         const y = Utils.getFiatShamirChallenge(com, p);
-        const y_n = Utils.vectorFromScalar(y, a_L.length);
-        if( doAssert ) assert(y_n.length === a_L.length && y_n.length === a_R.length, "All vectors should be same length");
+        const y_n = Vector.getFromSingleScalar(y, a_L.length);
+        if( doAssert ) assert(y_n.length() === a_L.length() && y_n.length() === a_R.length(), "All vectors should be same length");
 
         const yP = Utils.scalarToPoint(y.toString(16));
         const z = Utils.getFiatShamirChallenge(yP);
+
+        /**
+         * Function delta which can be computed from all
+         * non secret terms
+         *
+         * @param yn {array} vector of challenge param y
+         * @param z {bigint} challenge param z
+         * @param mod {bigint|boolean} if set it the result will be
+         *                             modulos mod
+         * @return {bigint} result of computation
+         */
+        const delta = (yn, z, mod=false) => {
+            if( mod && typeof mod !== 'bigint' ) {
+                throw new Error("Please supply bigint as mod parameter");
+            }
+            const ones = Vector.getFromSingleScalar(1n, yn.length);
+            const twoes = Vector.getFromSingleScalar(2n, yn.length);
+            const left = (z - z ** 2n) * ones.multVector(yn);
+            const right = z *** 3n * ones.multScalar(2n ** n);
+            const result = left - right;
+            if( mod ) { return result % mod }
+            return result;
+        };
+
+        const clearL = a_L.substract(z * 1n);
+        const clearR = y_n.multVector(a_R + (z * 1n)) + (z ** 2n) * (2n ** n)
     }
 
 }
