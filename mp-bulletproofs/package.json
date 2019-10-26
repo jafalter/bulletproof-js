@@ -12,6 +12,10 @@
   "author": "Jakob Abfalter",
   "license": "ISC",
   "dependencies": {
+    "assert": "^2.0.0",
     "elliptic": "^6.5.1"
+  },
+  "devDependencies": {
+    "mocha": "^6.2.2"
   }
 }
