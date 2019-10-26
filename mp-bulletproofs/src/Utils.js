@@ -1,3 +1,8 @@
+const sha256 = require('js-sha256').sha256;
+const EC = require('elliptic').ec;
+
+const ec = new EC('secp256k1');
+
 class Utils {
 
     /**
@@ -42,6 +47,76 @@ class Utils {
             result += nextVal;
         }
         return result;
+    }
+
+    /**
+     * Get a vector from a single scalar with the
+     * length len
+     *
+     * @param sc {bigint} the scalar
+     * @param len {number} how many elements the vector should have
+     * @return {Array} vector
+     */
+    static vectorFromScalar(sc, len) {
+        if( typeof sc !== 'bigint' ) {
+            throw new Error("Scalar i has to be a bigint");
+        }
+        const v = [];
+        for( let i = 0; i < len; i++ ) {
+            v.push(sc);
+        }
+        return v;
+    }
+
+    /**
+     * Get elliptic curve point from a hexadecimal encoded
+     * scalar
+     *
+     * @param hex {string}
+     * @return {point}
+     */
+    static scalarToPoint(hex) {
+        return ec.keyFromPrivate(hex, 'hex').getPublic();
+    }
+
+    /**
+     * Generate a sha256 hash and return
+     * a hex string output
+     *
+     * @param msg {string}
+     */
+    static sha256strtohex(msg) {
+        const hash = sha256.create();
+        hash.update(msg);
+        return hash.hex();
+    }
+
+    /**
+     * Generate a sha256 hash of a elliptic curve point
+     *
+     * @param p {point}
+     */
+    static sha256pointtohex(p) {
+        return Utils.sha256strtohex(p.encode('hex'));
+    }
+
+    /**
+     * Generate the next challenge using the
+     * Fiat shamir heuristic
+     *
+     * @param commitment {point} Elliptic curve point
+     *                           from which the next challenge will
+     *                           ge calculated from by sha256 hashing it
+     * @param mod        {bigint} the modulus of the elliptic curve
+     * @return {bigint}
+     */
+    static getFiatShamirChallenge(commitment, mod) {
+        if( typeof mod !== 'bigint' ) {
+            throw new Error("Please provide mod as bigint");
+        }
+        const hex = Utils.sha256pointtohex(commitment);
+        const num = BigInt('0x' + hex);
+        return num % mod;
     }
 }
 
