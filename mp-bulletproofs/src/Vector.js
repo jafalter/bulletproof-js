@@ -4,7 +4,7 @@ class Vector {
      * Get a vector from a single scalar with the
      * length len
      *
-     * @param sc {bigint} the scalar
+     * @param sc {BigInt} the scalar
      * @param len {number} how many elements the vector should have
      * @return {Vector} vector
      */
@@ -46,7 +46,7 @@ class Vector {
     /**
      * Add an element to the vector
      *
-     * @param e {bigint} BigInt value
+     * @param e {BigInt} BigInt value
      */
     addElem(e) {
         if( typeof e !== 'bigint' ) {
@@ -68,7 +68,7 @@ class Vector {
      * Returns the element at index i of a vector
      *
      * @param i {number} the index we want to retrieve
-     * @return {bigint} the value at index i
+     * @return {BigInt} the value at index i
      */
     get(i) {
         if( i > this.length() ) {
@@ -84,7 +84,7 @@ class Vector {
      * error will be thrown
      *
      * @param i {number}
-     * @param val {bigint}
+     * @param val {BigInt}
      */
     set(i, val) {
         if( this.length() < i ) {
@@ -100,8 +100,8 @@ class Vector {
      * Mulitply two vectors with a bigint result
      *
      * @param v2 {Vector}
-     * @param mod {bigint} optional modulus
-     * @return {bigint}
+     * @param mod {BigInt} optional modulus
+     * @return {BigInt}
      */
     multVectorToScalar(v2, mod=false) {
         return this.multVector(v2, mod).toScalar();
@@ -111,7 +111,7 @@ class Vector {
      * Multiply two vectors with a vector as result
      *
      * @param v2 {Vector} the other vector to muliply with
-     * @param mod {bigint} optional modulus for multiplication
+     * @param mod {BigInt} optional modulus for multiplication
      * @return {Vector} the resulting vector
      */
     multVector(v2, mod=false) {
@@ -130,30 +130,40 @@ class Vector {
     }
 
     /**
-     * Multiply vector with scalar
+     * Multipy vector with a scalar
      *
-     * @param sc {bigint} the scalar to multiply the vector with
-     * @return {bigint} result of the multiplication
+     * @param sc {BigInt} the scalar to multiply every element of the vector with
+     * @return {Vector} result vector
      */
-    multWithScalarToScalar(sc) {
-        let result = 0n;
+    multWithScalar(sc) {
+        const v = new Vector();
         if( typeof sc !== 'bigint') {
             throw new Error("Scalar sc has to be of type bigint");
         }
         for( let i = 0; i < this.length(); i++ ) {
-            result += this.get(i) * sc;
+            v.addElem(this.get(i) * sc);
         }
-        return result;
+        return v;
+    }
+
+    /**
+     * Multiply vector with scalar
+     *
+     * @param sc {BigInt} the scalar to multiply the vector with
+     * @return {BigInt} result of the multiplication
+     */
+    multWithScalarToScalar(sc) {
+        return this.multWithScalar(sc).toScalar();
     }
 
     /**
      * Substract a single scalar from
      * a vector
      *
-     * @param sc {bigint}
+     * @param sc {BigInt}
      * @return {Vector}
      */
-    substract(sc) {
+    subScalar(sc) {
         if( typeof sc !== 'bigint' ) {
             throw new Error("Scalar must be bigint");
         }
@@ -172,7 +182,7 @@ class Vector {
      * Add a scalar to all elements of the
      * vector
      *
-     * @param sc {bigint}
+     * @param sc {BigInt}
      */
     addScalar(sc) {
         const v = new Vector();
@@ -208,7 +218,7 @@ class Vector {
     /**
      * Sum upt the vector into a scalar
      *
-     * @return {bigint}
+     * @return {BigInt}
      */
     toScalar() {
         let result = 0n;

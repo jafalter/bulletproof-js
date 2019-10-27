@@ -10,14 +10,14 @@ class Factory {
      * You can find documentation and also learn how the proof works on
      * https://doc-internal.dalek.rs/bulletproofs/notes/range_proof/index.html
      *
-     * @param val {bigint} the value of the commitment. Please use BigInt not number
-     * @param x {bigint} blinding factor used in the commitment
+     * @param val {BigInt} the value of the commitment. Please use BigInt not number
+     * @param x {BigInt} blinding factor used in the commitment
      * @param com {point} pedersen commitment for which we want to compute the rangeproof
      * @param G {point} generator G used in pedersen
      * @param H {point} generator H used in pedersen
-     * @param lowBound {bigint} the lower bound of the rangeproof. Please use BigInt not number
-     * @param upBound {bigint} the upper bound of the rangeproof. Please use BigInt not number
-     * @param p {bigint} elliptic curve used for computation of the proof
+     * @param lowBound {BigInt} the lower bound of the rangeproof. Please use BigInt not number
+     * @param upBound {BigInt} the upper bound of the rangeproof. Please use BigInt not number
+     * @param p {BigInt} elliptic curve used for computation of the proof
      * @param doAssert {boolean} if we should do asserts. Should be set to false in production for performance gains
      * @return {RangeProof} Final rangeproof
      */
@@ -52,6 +52,7 @@ class Factory {
             pow++;
         }
         const n = BigInt(vec2.length());
+
         if( doAssert ) assert(vec1.length() <= vec2.length(), "Vector 1 length can't be greater then vec2");
         while ( vec1.length() < vec2.length() ) {
             vec1.addElem(0n);
@@ -62,7 +63,7 @@ class Factory {
 
         // To match notation with reference
         const a_L = vec1;
-        const a_R = vec1.substract(1n);
+        const a_R = vec1.subScalar(1n);
         if( doAssert ) assert(a_L.multVectorToScalar(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
 
         const y = Utils.getFiatShamirChallenge(com, p);
@@ -77,10 +78,10 @@ class Factory {
          * non secret terms
          *
          * @param yn {Vector} vector of challenge param y^n
-         * @param z {bigint} challenge param z
-         * @param mod {bigint|boolean} if set it the result will be
+         * @param z {BigInt} challenge param z
+         * @param mod {BigInt|boolean} if set it the result will be
          *                             modulos mod
-         * @return {bigint} result of computation
+         * @return {BigInt} result of computation
          */
         const delta = (yn, z, mod=false) => {
             if( mod && typeof mod !== 'bigint' ) {
@@ -96,16 +97,15 @@ class Factory {
         };
 
         const twopown = Vector.getVectorToPowerN(2n, BigInt(y_n.length()));
-        const clearL = a_L.substract(z);
-        const clearR = y_n.multVector(a_R.addScalar(z)).addVector(twopown.addScalar(z ** 2n));
+        const clearL = a_L.subScalar(z);
+        const a_R_plusz = a_R.addScalar(z);
+        const twos_times_zsq = twopown.multWithScalar(z ** 2n);
+        const clearR = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
 
-        const lefthandside = z ** 2n + delta(y_n, z);
-        const righthandside = clearL.multVectorToScalar(clearR);
-        console.log(lefthandside);
-        console.log(righthandside);
+        const lefthandside = ((z ** 2n) * val + delta(y_n, z)) % p;
+        const righthandside = (clearL.multVectorToScalar(clearR)) % p;
         assert(lefthandside === righthandside, "Non secret terms should equal the multiplication of the vectors");
     }
-
 }
 
 module.exports = Factory;

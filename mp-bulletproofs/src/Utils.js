@@ -10,7 +10,7 @@ class Utils {
      * of a vector
      *
      * @param vec {[]} Vector needs to contain only bigints
-     * @param scalar {bigint} the scalar to substract from the vector
+     * @param scalar {bigint} the scalar to subScalar from the vector
      * @return {[]} the new vector
      */
     static vecSubScalar(vec, scalar) {
