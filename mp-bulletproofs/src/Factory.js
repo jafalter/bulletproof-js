@@ -58,25 +58,25 @@ class Factory {
         }
         if( doAssert ) assert(vec1.length() === vec2.length(), "Vectors now have to be same length");
         // Now val can be represented as val = < vec1, vec2 >
-        if( doAssert ) assert(vec1.multVector(vec2) === val, "Now val has t obe < vec1, vec2 >");
+        if( doAssert ) assert(vec1.multVectorToScalar(vec2) === val, "Now val has t obe < vec1, vec2 >");
 
         // To match notation with reference
         const a_L = vec1;
         const a_R = vec1.substract(1n);
-        if( doAssert ) assert(a_L.multVector(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
+        if( doAssert ) assert(a_L.multVectorToScalar(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
 
         const y = Utils.getFiatShamirChallenge(com, p);
-        const y_n = Vector.getFromSingleScalar(y, a_L.length);
+        const y_n = Vector.getVectorToPowerN( y, BigInt(a_L.length()) );
         if( doAssert ) assert(y_n.length() === a_L.length() && y_n.length() === a_R.length(), "All vectors should be same length");
 
         const yP = Utils.scalarToPoint(y.toString(16));
-        const z = Utils.getFiatShamirChallenge(yP);
+        const z = Utils.getFiatShamirChallenge(yP, p);
 
         /**
          * Function delta which can be computed from all
          * non secret terms
          *
-         * @param yn {array} vector of challenge param y
+         * @param yn {Vector} vector of challenge param y^n
          * @param z {bigint} challenge param z
          * @param mod {bigint|boolean} if set it the result will be
          *                             modulos mod
@@ -86,17 +86,24 @@ class Factory {
             if( mod && typeof mod !== 'bigint' ) {
                 throw new Error("Please supply bigint as mod parameter");
             }
-            const ones = Vector.getFromSingleScalar(1n, yn.length);
-            const twoes = Vector.getFromSingleScalar(2n, yn.length);
-            const left = (z - z ** 2n) * ones.multVector(yn);
-            const right = z *** 3n * ones.multScalar(2n ** n);
+            const ones = Vector.getVectorWithOnlyScalar(1n, yn.length());
+            const twopown = Vector.getVectorToPowerN(2n, BigInt(yn.length()));
+            const left = (z - z ** 2n) * ones.multVectorToScalar(yn);
+            const right = z ** 3n * ones.multVectorToScalar(twopown);
             const result = left - right;
             if( mod ) { return result % mod }
             return result;
         };
 
-        const clearL = a_L.substract(z * 1n);
-        const clearR = y_n.multVector(a_R + (z * 1n)) + (z ** 2n) * (2n ** n)
+        const twopown = Vector.getVectorToPowerN(2n, BigInt(y_n.length()));
+        const clearL = a_L.substract(z);
+        const clearR = y_n.multVector(a_R.addScalar(z)).addVector(twopown.addScalar(z ** 2n));
+
+        const lefthandside = z ** 2n + delta(y_n, z);
+        const righthandside = clearL.multVectorToScalar(clearR);
+        console.log(lefthandside);
+        console.log(righthandside);
+        assert(lefthandside === righthandside, "Non secret terms should equal the multiplication of the vectors");
     }
 
 }
