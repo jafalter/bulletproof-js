@@ -2,6 +2,7 @@ const assert = require('assert');
 
 const Utils = require('./Utils');
 const Vector = require('./Vector');
+const Maths = require('./Maths');
 
 class Factory {
 
@@ -19,9 +20,10 @@ class Factory {
      * @param upBound {BigInt} the upper bound of the rangeproof. Please use BigInt not number
      * @param p {BigInt} elliptic curve used for computation of the proof
      * @param doAssert {boolean} if we should do asserts. Should be set to false in production for performance gains
+     * @param randomNum {boolean|function} optional random bigint generating function
      * @return {RangeProof} Final rangeproof
      */
-    static computeBulletproof(val, x, com, G, H, lowBound, upBound, p, doAssert=true) {
+    static computeBulletproof(val, x, com, G, H, lowBound, upBound, p, doAssert=true, randomNum=false) {
 
         if( typeof val !== 'bigint' || typeof  x !== 'bigint' || typeof lowBound !== 'bigint' || typeof upBound !== 'bigint' ) {
             throw new Error("Parameters val, x, low and upper bound have to be bigints");
@@ -66,6 +68,21 @@ class Factory {
         const a_R = vec1.subScalar(1n);
         if( doAssert ) assert(a_L.multVectorToScalar(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
 
+        /*
+        * Now we want to prove three statements
+        * < a_L, 2^n > = v (the binary vector representation times a vector containing powers of 2 will result in the original number)
+        * a_L * a_R = 0
+        * (a_L -1) - a_R = 0 (Those two statements prove that a_L contains only 1 and 0)
+        *
+        * To make the prove really compact we want to combine these statements
+        * into one single vector product.
+        * We can do this by utilizing two challenges from the verifier y and z
+        * To make the prove interactive we use Fiat Shamir Heuristic, while we always hash a commitment
+        * to get the next random challenge, the first commitment is our pedersen commitment.
+        * To understand the details of the math on who the 3 statements are combined check
+        * https://doc-internal.dalek.rs/bulletproofs/notes/range_proof/index.html
+        */
+
         const y = Utils.getFiatShamirChallenge(com, p);
         const y_n = Vector.getVectorToPowerN( y, BigInt(a_L.length()) );
         if( doAssert ) assert(y_n.length() === a_L.length() && y_n.length() === a_R.length(), "All vectors should be same length");
@@ -73,38 +90,34 @@ class Factory {
         const yP = Utils.scalarToPoint(y.toString(16));
         const z = Utils.getFiatShamirChallenge(yP, p);
 
-        /**
-         * Function delta which can be computed from all
-         * non secret terms
-         *
-         * @param yn {Vector} vector of challenge param y^n
-         * @param z {BigInt} challenge param z
-         * @param mod {BigInt|boolean} if set it the result will be
-         *                             modulos mod
-         * @return {BigInt} result of computation
-         */
-        const delta = (yn, z, mod=false) => {
-            if( mod && typeof mod !== 'bigint' ) {
-                throw new Error("Please supply bigint as mod parameter");
-            }
-            const ones = Vector.getVectorWithOnlyScalar(1n, yn.length());
-            const twopown = Vector.getVectorToPowerN(2n, BigInt(yn.length()));
-            const left = (z - z ** 2n) * ones.multVectorToScalar(yn);
-            const right = z ** 3n * ones.multVectorToScalar(twopown);
-            const result = left - right;
-            if( mod ) { return result % mod }
-            return result;
-        };
-
-        const twopown = Vector.getVectorToPowerN(2n, BigInt(y_n.length()));
         const clearL = a_L.subScalar(z);
         const a_R_plusz = a_R.addScalar(z);
-        const twos_times_zsq = twopown.multWithScalar(z ** 2n);
+        const twos_times_zsq = vec2.multWithScalar(z ** 2n);
         const clearR = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
 
-        const lefthandside = ((z ** 2n) * val + delta(y_n, z)) % p;
+        const lefthandside = ((z ** 2n) * val + Maths.delta(y_n, z)) % p;
         const righthandside = (clearL.multVectorToScalar(clearR)) % p;
+
+        // Now we got a single vector product proving our 3 statements which can be easily verified
+        // as is done below:
         assert(lefthandside === righthandside, "Non secret terms should equal the multiplication of the vectors");
+
+        // However we can't sent this two vectors to the verifier since it would leak information about v.
+        // Note that the inner-product argument which is actually transmitted instead of the full vectors
+        // are not zero-knowledge and therefore can't be used either.
+        // Therefore we need to introduce additional blinding factors
+        const s_L = new Vector();
+        const s_R = new Vector();
+        if( !randomNum ) {
+            const Rand = require('./Rand');
+            randomNum = Rand.secureRandomBigInt;
+        }
+        for( let i = 0; i < n; i++ ) {
+            const r1 = randomNum(p);
+            const r2 = randomNum(p);
+            s_L.addElem(r1);
+            s_R.addElem(r2);
+        }
     }
 }
 
