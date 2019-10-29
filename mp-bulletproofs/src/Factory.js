@@ -90,17 +90,23 @@ class Factory {
         const yP = Utils.scalarToPoint(y.toString(16));
         const z = Utils.getFiatShamirChallenge(yP, p);
 
-        const clearL = a_L.subScalar(z);
-        const a_R_plusz = a_R.addScalar(z);
         const twos_times_zsq = vec2.multWithScalar(z ** 2n);
-        const clearR = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
 
-        const lefthandside = ((z ** 2n) * val + Maths.delta(y_n, z)) % p;
-        const righthandside = (clearL.multVectorToScalar(clearR)) % p;
+        if( doAssert ) {
+            // Unblinded version
+            // Don't really have to calculate those
+            const a_R_plusz = a_R.addScalar(z);
 
-        // Now we got a single vector product proving our 3 statements which can be easily verified
-        // as is done below:
-        assert(lefthandside === righthandside, "Non secret terms should equal the multiplication of the vectors");
+            const clearL = a_L.subScalar(z);
+            const clearR = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
+
+            const lefthandside = ((z ** 2n) * val + Maths.delta(y_n, z)) % p;
+            const righthandside = (clearL.multVectorToScalar(clearR)) % p;
+
+            // Now we got a single vector product proving our 3 statements which can be easily verified
+            // as is done below:
+            assert(lefthandside === righthandside, "Non secret terms should equal the multiplication of the vectors");
+        }
 
         // However we can't sent this two vectors to the verifier since it would leak information about v.
         // Note that the inner-product argument which is actually transmitted instead of the full vectors
@@ -117,6 +123,43 @@ class Factory {
             const r2 = randomNum(p);
             s_L.addElem(r1);
             s_R.addElem(r2);
+        }
+
+        // The blinded l(x) and r(x) have a_L and a_R replaced by
+        // blinded terms a_L + s_L*x and a_R + s_R*x
+
+        /**
+         * Vector polynomial l(x) which is a_L blinded
+         * by s_L
+         *
+         * @param x {BigInt} random number
+         * @return {Vector}
+         */
+        const l = (x) => {
+            return a_L.addVector(s_L.multWithScalar(x)).subScalar(z)
+        };
+
+        /**
+         * Vector polynomial r(y) which is a_R blinded
+         * by s_R
+         *
+         * @param x {BigInt} random number
+         * @return {Vector}
+         */
+        const r = (x) => {
+            return y_n.multVector(a_R.addVector(s_R.multWithScalar(x)).addScalar(z)).addVector(twos_times_zsq)
+        };
+
+        /**
+         * Term t of the form
+         * t_0 + t_1x + t_2x²
+         * Whereas t_0 is our unblinded version
+         *
+         * @param x {BigInt}
+         * @return {BigInt}
+         */
+        const t = (x) => {
+            return l(x).multVectorToScalar(r(x));
         }
     }
 }
