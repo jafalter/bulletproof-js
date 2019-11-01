@@ -1,8 +1,8 @@
 {
-  "name": "mp-bulletproofs",
+  "name": "bulletproof-js",
   "version": "0.0.0",
-  "description": "Implementation of a multiparty bulletproof protocol",
-  "main": "mpbulletproof.js",
+  "description": "Implementation of the bulletproof protocol in plain javascript",
+  "main": "bulletproof-js.js",
   "scripts": {
     "test": "mocha"
   },

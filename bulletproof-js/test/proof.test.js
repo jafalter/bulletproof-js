@@ -1,4 +1,4 @@
-const Factory = require('../src/Factory');
+const Factory = require('../src/ProofFactory');
 const Utils = require('../src/Utils');
 const secp256k1 = require('../src/Constants').secp256k1;
 

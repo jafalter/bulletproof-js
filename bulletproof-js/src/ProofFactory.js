@@ -4,28 +4,29 @@ const Utils = require('./Utils');
 const Vector = require('./Vector');
 const Maths = require('./Maths');
 
-class Factory {
+class ProofFactory {
 
     /**
      * Compute a Bulletproof. The code is structured after a popular Bulletproof library implemented in Rust.
      * You can find documentation and also learn how the proof works on
      * https://doc-internal.dalek.rs/bulletproofs/notes/range_proof/index.html
      *
-     * @param val {BigInt} the value of the commitment. Please use BigInt not number
-     * @param x {BigInt} blinding factor used in the commitment
-     * @param com {point} pedersen commitment for which we want to compute the rangeproof
+     * @param v {BigInt} the value of the commitment. Please use BigInt not number
+     * @param B {BigInt} blinding factor used in the commitment
+     * @param V {point} pedersen commitment for which we want to compute the rangeproof, which
+     *                  has to be a valid commitement to v with blinding factor B
      * @param G {point} generator G used in pedersen
      * @param H {point} generator H used in pedersen
      * @param lowBound {BigInt} the lower bound of the rangeproof. Please use BigInt not number
      * @param upBound {BigInt} the upper bound of the rangeproof. Please use BigInt not number
-     * @param p {BigInt} elliptic curve used for computation of the proof
+     * @param p {BigInt} elliptic curve mod used for computation of the proof
      * @param doAssert {boolean} if we should do asserts. Should be set to false in production for performance gains
      * @param randomNum {boolean|function} optional random bigint generating function
-     * @return {RangeProof} Final rangeproof
+     * @return {RangeProof} Final rangeproof which can be verified
      */
-    static computeBulletproof(val, x, com, G, H, lowBound, upBound, p, doAssert=true, randomNum=false) {
+    static computeBulletproof(v, B, V, G, H, lowBound, upBound, p, doAssert=true, randomNum=false) {
 
-        if( typeof val !== 'bigint' || typeof  x !== 'bigint' || typeof lowBound !== 'bigint' || typeof upBound !== 'bigint' ) {
+        if( typeof v !== "bigint" || typeof  B !== "bigint" || typeof lowBound !== "bigint" || typeof upBound !== "bigint" ) {
             throw new Error("Parameters val, x, low and upper bound have to be bigints");
         }
         if( lowBound !== 0n ) {
@@ -34,10 +35,10 @@ class Factory {
         if( (upBound % 2n) !== 0n ) {
             throw new Error("Upper bound has to be a power of 2");
         }
-        if( val < lowBound || val > upBound ) {
+        if( v < lowBound || v > upBound ) {
             throw new Error("val must be in the range [lowBound, upBound]");
         }
-        const binary = val.toString(2);
+        const binary = v.toString(2);
 
         // Vector 1 contains the value in binary
         const vec1 = new Vector();
@@ -61,7 +62,7 @@ class Factory {
         }
         if( doAssert ) assert(vec1.length() === vec2.length(), "Vectors now have to be same length");
         // Now val can be represented as val = < vec1, vec2 >
-        if( doAssert ) assert(vec1.multVectorToScalar(vec2) === val, "Now val has t obe < vec1, vec2 >");
+        if( doAssert ) assert(vec1.multVectorToScalar(vec2) === v, "Now val has t obe < vec1, vec2 >");
 
         // To match notation with reference
         const a_L = vec1;
@@ -83,7 +84,7 @@ class Factory {
         * https://doc-internal.dalek.rs/bulletproofs/notes/range_proof/index.html
         */
 
-        const y = Utils.getFiatShamirChallenge(com, p);
+        const y = Utils.getFiatShamirChallenge(V, p);
         const y_n = Vector.getVectorToPowerN( y, BigInt(a_L.length()) );
         if( doAssert ) assert(y_n.length() === a_L.length() && y_n.length() === a_R.length(), "All vectors should be same length");
 
@@ -100,7 +101,7 @@ class Factory {
             const clearL = a_L.subScalar(z);
             const clearR = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
 
-            const lefthandside = ((z ** 2n) * val + Maths.delta(y_n, z)) % p;
+            const lefthandside = ((z ** 2n) * v + Maths.delta(y_n, z)) % p;
             const righthandside = (clearL.multVectorToScalar(clearR)) % p;
 
             // Now we got a single vector product proving our 3 statements which can be easily verified
@@ -161,7 +162,11 @@ class Factory {
         const t = (x) => {
             return l(x).multVectorToScalar(r(x));
         }
+
+        // Now we need to commit to T1 = Com(t1), and T2 = Com(t2)
+        // Together with V (our original commitment) those are sent to the verifier
+        
     }
 }
 
-module.exports = Factory;
+module.exports = ProofFactory;

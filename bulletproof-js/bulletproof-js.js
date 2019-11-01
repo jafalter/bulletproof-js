@@ -1,4 +1,4 @@
-const Factory = require('src/Factory');
+const Factory = require('src/ProofFactory');
 
 /**
  * Compute a Bulletproof
