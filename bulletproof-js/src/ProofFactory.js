@@ -12,11 +12,11 @@ class ProofFactory {
      * https://doc-internal.dalek.rs/bulletproofs/notes/range_proof/index.html
      *
      * @param v {BigInt} the value of the commitment. Please use BigInt not number
-     * @param B {BigInt} blinding factor used in the commitment
-     * @param V {point} pedersen commitment for which we want to compute the rangeproof, which
+     * @param bf {BigInt} blinding factor used in the commitment
+     * @param V {Point} pedersen commitment for which we want to compute the rangeproof, which
      *                  has to be a valid commitement to v with blinding factor B
-     * @param G {point} generator G used in pedersen
-     * @param H {point} generator H used in pedersen
+     * @param G {Point} generator G used in pedersen
+     * @param H {Point} generator H used in pedersen
      * @param lowBound {BigInt} the lower bound of the rangeproof. Please use BigInt not number
      * @param upBound {BigInt} the upper bound of the rangeproof. Please use BigInt not number
      * @param p {BigInt} elliptic curve mod used for computation of the proof
@@ -24,9 +24,9 @@ class ProofFactory {
      * @param randomNum {boolean|function} optional random bigint generating function
      * @return {RangeProof} Final rangeproof which can be verified
      */
-    static computeBulletproof(v, B, V, G, H, lowBound, upBound, p, doAssert=true, randomNum=false) {
+    static computeBulletproof(v, bf, V, G, H, lowBound, upBound, p, doAssert=true, randomNum=false) {
 
-        if( typeof v !== "bigint" || typeof  B !== "bigint" || typeof lowBound !== "bigint" || typeof upBound !== "bigint" ) {
+        if( typeof v !== "bigint" || typeof  bf !== "bigint" || typeof lowBound !== "bigint" || typeof upBound !== "bigint" ) {
             throw new Error("Parameters val, x, low and upper bound have to be bigints");
         }
         if( lowBound !== 0n ) {
@@ -93,16 +93,14 @@ class ProofFactory {
 
         const twos_times_zsq = vec2.multWithScalar(z ** 2n);
 
+        // Unblinded version
+        const a_R_plusz = a_R.addScalar(z);
+
+        const l_0 = a_L.subScalar(z);
+        const r_0 = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
         if( doAssert ) {
-            // Unblinded version
-            // Don't really have to calculate those
-            const a_R_plusz = a_R.addScalar(z);
-
-            const clearL = a_L.subScalar(z);
-            const clearR = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
-
             const lefthandside = ((z ** 2n) * v + Maths.delta(y_n, z)) % p;
-            const righthandside = (clearL.multVectorToScalar(clearR)) % p;
+            const righthandside = (l_0.multVectorToScalar(r_0)) % p;
 
             // Now we got a single vector product proving our 3 statements which can be easily verified
             // as is done below:
@@ -161,11 +159,34 @@ class ProofFactory {
          */
         const t = (x) => {
             return l(x).multVectorToScalar(r(x));
-        }
+        };
 
         // Now we need to commit to T1 = Com(t1), and T2 = Com(t2)
         // Together with V (our original commitment) those are sent to the verifier
-        
+        const l_1 = l_0.addVector(s_L);
+        const r_1 = r_0.addVector(s_R);
+
+        const t_0 = l_0.multVectorToScalar(r_0);
+        const t_2 = l_1.multVectorToScalar(r_1);
+        const t_1 = l_0.addVector(l_1).multVectorToScalar(r_0.addVector(r_1)) - t_0 - t_2;
+
+        const T1_bf = randomNum(p);
+        const T1 = Utils.getPedersenCommitment(T1_bf, t_1, H);
+
+        const T2_bf = randomNum(p);
+        const T2 = Utils.getPedersenCommitment(T2_bf, t_2, H);
+
+        // Now we get the challenge point x
+        const zP = Utils.scalarToPoint(z.toString(16));
+        const x = Utils.getFiatShamirChallenge(zP);
+
+
+        const tx = t(x);
+        const tx_bf = (z ** 2) * bf + x * T1_bf + (x ** 2) * T2_bf
+        // Send tx and tx_bf back to the verifier
+
+        if( doAssert ) {
+        }
     }
 }
 

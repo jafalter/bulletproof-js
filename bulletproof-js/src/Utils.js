@@ -1,5 +1,6 @@
 const sha256 = require('js-sha256').sha256;
 const EC = require('elliptic').ec;
+const BN = require('bn');
 
 const ec = new EC('secp256k1');
 
@@ -105,11 +106,11 @@ class Utils {
      * Generate the next challenge using the
      * Fiat shamir heuristic
      *
-     * @param commitment {point} Elliptic curve point
+     * @param commitment {Point} Elliptic curve point
      *                           from which the next challenge will
      *                           ge calculated from by sha256 hashing it
-     * @param mod        {bigint} the modulus of the elliptic curve
-     * @return {bigint}
+     * @param mod        {BigInt} the modulus of the elliptic curve
+     * @return {BigInt}
      */
     static getFiatShamirChallenge(commitment, mod) {
         if( typeof mod !== 'bigint' ) {
@@ -118,6 +119,30 @@ class Utils {
         const hex = Utils.sha256pointtohex(commitment);
         const num = BigInt('0x' + hex);
         return num % mod;
+    }
+
+    /**
+     * Convert BigInt to BN (used in elliptic)
+     *
+     * @param bgint {BigInt}
+     * @return {BN}
+     */
+    static toBN(bgint) {
+        return new BN(bgint.toString(16), 'hex');
+    }
+
+    /**
+     * Generate a Pedersen commitment
+     * on secp256k1 curve
+     *
+     * @param x {BigInt} The blinding factor
+     * @param v {BigInt} The value we want to commit to
+     * @param H {Point} Second generator point used in the commitment
+     */
+    static getPedersenCommitment(x, v, H) {
+        const x_BN = Utils.toBN(x);
+        const v_BN = Utils.toBN(v);
+        return ec.g.mul(x_BN).add(H.mul(v_BN))
     }
 }
 
