@@ -90,8 +90,9 @@ class ProofFactory {
 
         const yP = Utils.scalarToPoint(y.toString(16));
         const z = Utils.getFiatShamirChallenge(yP, p);
+        const zsq = z ** 2n;
 
-        const twos_times_zsq = vec2.multWithScalar(z ** 2n);
+        const twos_times_zsq = vec2.multWithScalar(zsq);
 
         // Unblinded version
         const a_R_plusz = a_R.addScalar(z);
@@ -99,7 +100,7 @@ class ProofFactory {
         const l_0 = a_L.subScalar(z);
         const r_0 = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
         if( doAssert ) {
-            const lefthandside = ((z ** 2n) * v + Maths.delta(y_n, z)) % p;
+            const lefthandside = (zsq * v + Maths.delta(y_n, z)) % p;
             const righthandside = (l_0.multVectorToScalar(r_0)) % p;
 
             // Now we got a single vector product proving our 3 statements which can be easily verified
@@ -178,14 +179,22 @@ class ProofFactory {
 
         // Now we get the challenge point x
         const zP = Utils.scalarToPoint(z.toString(16));
-        const x = Utils.getFiatShamirChallenge(zP);
+        const x = Utils.getFiatShamirChallenge(zP, p);
 
 
         const tx = t(x);
-        const tx_bf = (z ** 2) * bf + x * T1_bf + (x ** 2) * T2_bf
-        // Send tx and tx_bf back to the verifier
+        const tx_bf = zsq * bf + x * T1_bf + (x ** 2n) * T2_bf;
+        // Send openings tx and tx_bf back to the verifier
 
         if( doAssert ) {
+            const leftEq = G.mul(Utils.toBN(tx)).add(H.mul(Utils.toBN(tx_bf)));
+            const leftEqX = leftEq.x.toString();
+            const leftEqY = leftEq.y.toString();
+
+            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.delta(y_n, z)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(x)));
+            const rightEqX = rightEq.x.toString();
+            const rightEqY = rightEq.y.toString();
+            assert(leftEqX === rightEqX && leftEqY === rightEqY, "What the verifier checks to verify t(x) is correct polynomial");
         }
     }
 }

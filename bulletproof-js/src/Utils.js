@@ -1,6 +1,6 @@
 const sha256 = require('js-sha256').sha256;
 const EC = require('elliptic').ec;
-const BN = require('bn');
+const BN = require('bn.js');
 
 const ec = new EC('secp256k1');
 
@@ -11,7 +11,7 @@ class Utils {
      * of a vector
      *
      * @param vec {[]} Vector needs to contain only bigints
-     * @param scalar {bigint} the scalar to subScalar from the vector
+     * @param scalar {BigInt} the scalar to subScalar from the vector
      * @return {[]} the new vector
      */
     static vecSubScalar(vec, scalar) {
@@ -34,7 +34,7 @@ class Utils {
      *
      * @param v1 {array} must only contain bigints
      * @param v2 {array} must only contain bigints
-     * @return {bigint} the result of the multiplication
+     * @return {BigInt} the result of the multiplication
      */
     static vecMult(v1, v2) {
         let result = 0n;
@@ -55,7 +55,7 @@ class Utils {
      * Get a vector from a single scalar with the
      * length len
      *
-     * @param sc {bigint} the scalar
+     * @param sc {BigInt} the scalar
      * @param len {number} how many elements the vector should have
      * @return {Array} vector
      */
