@@ -142,7 +142,7 @@ class Utils {
     static getPedersenCommitment(x, v, H) {
         const x_BN = Utils.toBN(x);
         const v_BN = Utils.toBN(v);
-        return ec.g.mul(x_BN).add(H.mul(v_BN))
+        return ec.g.mul(v_BN).add(H.mul(x_BN))
     }
 }
 

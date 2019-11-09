@@ -44,6 +44,20 @@ class Vector {
     }
 
     /**
+     * Create a new Vector object
+     * with the same value
+     *
+     * @return {Vector}
+     */
+    clone() {
+        const v = new Vector();
+        for( let i = 0; i < this.length(); i++ ) {
+            v.addElem(this.get(i));
+        }
+        return v;
+    }
+
+    /**
      * Add an element to the vector
      *
      * @param e {BigInt} BigInt value

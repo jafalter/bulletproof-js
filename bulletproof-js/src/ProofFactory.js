@@ -164,8 +164,8 @@ class ProofFactory {
 
         // Now we need to commit to T1 = Com(t1), and T2 = Com(t2)
         // Together with V (our original commitment) those are sent to the verifier
-        const l_1 = l_0.addVector(s_L);
-        const r_1 = r_0.addVector(s_R);
+        const l_1 = s_L.clone();
+        const r_1 = y_n.multVector(s_R);
 
         const t_0 = l_0.multVectorToScalar(r_0);
         const t_2 = l_1.multVectorToScalar(r_1);
@@ -181,20 +181,15 @@ class ProofFactory {
         const zP = Utils.scalarToPoint(z.toString(16));
         const x = Utils.getFiatShamirChallenge(zP, p);
 
-
-        const tx = t(x);
-        const tx_bf = zsq * bf + x * T1_bf + (x ** 2n) * T2_bf;
+        const xsq = x ** 2n;
+        const tx = t(x) + x * t_1 + xsq * t_2;
+        const tx_bf = zsq * bf + x * T1_bf + xsq * T2_bf;
         // Send openings tx and tx_bf back to the verifier
 
         if( doAssert ) {
-            const leftEq = G.mul(Utils.toBN(tx)).add(H.mul(Utils.toBN(tx_bf)));
-            const leftEqX = leftEq.x.toString();
-            const leftEqY = leftEq.y.toString();
-
+            const leftEq = Utils.getPedersenCommitment(tx, tx_bf, H);
             const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.delta(y_n, z)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(x)));
-            const rightEqX = rightEq.x.toString();
-            const rightEqY = rightEq.y.toString();
-            assert(leftEqX === rightEqX && leftEqY === rightEqY, "What the verifier checks to verify t(x) is correct polynomial");
+            assert(leftEq.eq(rightEq), "What the verifier checks to verify t(x) is correct polynomial");
         }
     }
 }
