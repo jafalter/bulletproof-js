@@ -146,11 +146,11 @@ class Utils {
      * Generate a Pedersen commitment
      * on secp256k1 curve
      *
-     * @param x {BigInt} The blinding factor
      * @param v {BigInt} The value we want to commit to
+     * @param x {BigInt} The blinding factor
      * @param H {Point} Second generator point used in the commitment
      */
-    static getPedersenCommitment(x, v, H=null) {
+    static getPedersenCommitment(v, x, H=null) {
         if( H === null ) {
             H = Utils.getHFromHashingG(ec.g);
         }

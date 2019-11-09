@@ -97,11 +97,11 @@ class ProofFactory {
         // Unblinded version
         const a_R_plusz = a_R.addScalar(z);
 
-        const l_0 = a_L.subScalar(z);
-        const r_0 = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
+        const l0 = a_L.subScalar(z);
+        const r0 = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
         if( doAssert ) {
             const lefthandside = (zsq * v + Maths.delta(y_n, z)) % p;
-            const righthandside = (l_0.multVectorToScalar(r_0)) % p;
+            const righthandside = (l0.multVectorToScalar(r0)) % p;
 
             // Now we got a single vector product proving our 3 statements which can be easily verified
             // as is done below:
@@ -164,26 +164,26 @@ class ProofFactory {
 
         // Now we need to commit to T1 = Com(t1), and T2 = Com(t2)
         // Together with V (our original commitment) those are sent to the verifier
-        const l_1 = s_L.clone();
-        const r_1 = y_n.multVector(s_R);
+        const l1 = s_L.clone();
+        const r1 = y_n.multVector(s_R);
 
-        const t_0 = l_0.multVectorToScalar(r_0);
-        const t_2 = l_1.multVectorToScalar(r_1);
-        const t_1 = l_0.addVector(l_1).multVectorToScalar(r_0.addVector(r_1)) - t_0 - t_2;
+        const t0 = l0.multVectorToScalar(r0) % p;
+        const t2 = l1.multVectorToScalar(r1) % p;
+        const t1 = (l0.addVector(l1).multVectorToScalar(r0.addVector(r1)) - t0 - t2) % p;
 
-        const T1_bf = randomNum(p);
-        const T1 = Utils.getPedersenCommitment(T1_bf, t_1, H);
+        const t1_bf = randomNum(p);
+        const T1 = Utils.getPedersenCommitment(t1, t1_bf, H);
 
-        const T2_bf = randomNum(p);
-        const T2 = Utils.getPedersenCommitment(T2_bf, t_2, H);
+        const t2_bf = randomNum(p);
+        const T2 = Utils.getPedersenCommitment(t2, t2_bf, H);
 
         // Now we get the challenge point x
         const zP = Utils.scalarToPoint(z.toString(16));
         const x = Utils.getFiatShamirChallenge(zP, p);
 
-        const xsq = x ** 2n;
-        const tx = t(x) + x * t_1 + xsq * t_2;
-        const tx_bf = zsq * bf + x * T1_bf + xsq * T2_bf;
+        const xsq = (x ** 2n) % p;
+        const tx = t(x) % p;
+        const tx_bf = zsq * bf + x * t1_bf + xsq * t2_bf;
         // Send openings tx and tx_bf back to the verifier
 
         if( doAssert ) {
