@@ -75,7 +75,7 @@ class Utils {
      * scalar
      *
      * @param hex {string}
-     * @return {point}
+     * @return {Point}
      */
     static scalarToPoint(hex) {
         return ec.keyFromPrivate(hex, 'hex').getPublic();
@@ -96,7 +96,7 @@ class Utils {
     /**
      * Generate a sha256 hash of a elliptic curve point
      *
-     * @param p {point}
+     * @param p {Point}
      */
     static sha256pointtohex(p) {
         return Utils.sha256strtohex(p.encode('hex'));
@@ -122,6 +122,17 @@ class Utils {
     }
 
     /**
+     * Get a new generator point by sha256 hashing G
+     *
+     * @param G {Point}
+     * @return {Point}
+     */
+    static getHFromHashingG(G) {
+        const hashedG = Utils.sha256pointtohex(G);
+        return  Utils.scalarToPoint(hashedG);
+    }
+
+    /**
      * Convert BigInt to BN (used in elliptic)
      *
      * @param bgint {BigInt}
@@ -139,10 +150,14 @@ class Utils {
      * @param v {BigInt} The value we want to commit to
      * @param H {Point} Second generator point used in the commitment
      */
-    static getPedersenCommitment(x, v, H) {
+    static getPedersenCommitment(x, v, H=null) {
+        if( H === null ) {
+            H = Utils.getHFromHashingG(ec.g);
+        }
+        const G = ec.g;
         const x_BN = Utils.toBN(x);
         const v_BN = Utils.toBN(v);
-        return ec.g.mul(v_BN).add(H.mul(x_BN))
+        return G.mul(v_BN).add(H.mul(x_BN))
     }
 }
 
