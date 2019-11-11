@@ -182,14 +182,27 @@ class ProofFactory {
         const x = Utils.getFiatShamirChallenge(zP, p);
 
         const xsq = (x ** 2n) % p;
-        const tx = t(x) % p;
-        const tx_bf = zsq * bf + x * t1_bf + xsq * t2_bf;
+        const tx = t0 + t1 * x + t2 * xsq;
+        const tx_bf = zsq * bf + x * t1_bf + t2_bf * xsq;
         // Send openings tx and tx_bf back to the verifier
 
         if( doAssert ) {
+            const delta = Maths.delta(y_n, z, p);
+            const Bdelta = Utils.toBN(delta);
+            const Bzsq = Utils.toBN(zsq);
+
+            // Check the three equalities of the terms
+            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).eq(V.mul(Bzsq)), "partial equality 1 of the term");
+            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).add(G.mul(Bdelta)).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 2 of the term");
+            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).add(G.mul(Bdelta)).eq(Utils.getPedersenCommitment(t0, zsq * bf)));
+            assert(Utils.getPedersenCommitment(t0, zsq * bf).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 3 of the term");
+            assert(Utils.getPedersenCommitment(x * t1, x * t1_bf).eq(T1.mul(Utils.toBN(x)), "partial equality 4 of the term"));
+            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf)).eq(T2.mul(Utils.toBN(xsq)), "partial equality 5 of the term");
+
+
             const leftEq = Utils.getPedersenCommitment(tx, tx_bf, H);
-            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.delta(y_n, z)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(x)));
-            assert(leftEq.eq(rightEq), "What the verifier checks to verify t(x) is correct polynomial");
+            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.delta(y_n, z)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
+            assert(leftEq.eq(rightEq), "Final equality the verifier checks to verify t(x) is correct polynomial");
         }
     }
 }
