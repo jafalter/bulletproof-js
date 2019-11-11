@@ -34,6 +34,18 @@ describe('Tests for the rangeproof', () => {
         assert(T1.mul(Utils.toBN(sc)).eq(T2));
     });
 
+    it('Test mult properties of pedersen with negative num', () => {
+        const t1 = -4424687248756834944667496427199067151987779098219282389160949909025658367322n;
+        const x = 38659561957554344830346811456777626115164894886626759056962864666140509109118n;
+        const xBN  = Utils.toBN(x);
+        const r = 206032474729127474062261152183333172264689698899312462254655119185748812599n;
+
+        const T1 = Utils.getPedersenCommitment(t1, r);
+        const T1cmp = Utils.getPedersenCommitment(t1 * x, r * x);
+
+        assert(T1.mul(xBN).eq(T1cmp));
+    });
+
     it('Should create a range proof', () => {
         const x = 1897278917812981289198n;
         const val = 25n;

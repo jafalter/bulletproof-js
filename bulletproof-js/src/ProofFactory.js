@@ -190,14 +190,15 @@ class ProofFactory {
             const delta = Maths.delta(y_n, z, p);
             const Bdelta = Utils.toBN(delta);
             const Bzsq = Utils.toBN(zsq);
+            const Bx = Utils.toBN(x);
+            const Bxsq = Utils.toBN(xsq);
 
             // Check the three equalities of the terms
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).eq(V.mul(Bzsq)), "partial equality 1 of the term");
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).add(G.mul(Bdelta)).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 2 of the term");
-            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).add(G.mul(Bdelta)).eq(Utils.getPedersenCommitment(t0, zsq * bf)));
             assert(Utils.getPedersenCommitment(t0, zsq * bf).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 3 of the term");
-            assert(Utils.getPedersenCommitment(x * t1, x * t1_bf).eq(T1.mul(Utils.toBN(x)), "partial equality 4 of the term"));
-            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf)).eq(T2.mul(Utils.toBN(xsq)), "partial equality 5 of the term");
+            assert(Utils.getPedersenCommitment(x * t1, x * t1_bf).eq(T1.mul(Bx), "partial equality 4 of the term"));
+            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf)).eq(T2.mul(Bxsq), "partial equality 5 of the term");
 
 
             const leftEq = Utils.getPedersenCommitment(tx, tx_bf, H);
