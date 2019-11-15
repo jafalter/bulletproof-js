@@ -90,7 +90,7 @@ class ProofFactory {
 
         const yP = Utils.scalarToPoint(y.toString(16));
         const z = Utils.getFiatShamirChallenge(yP, p);
-        const zsq = z ** 2n;
+        const zsq = Maths.mod(z ** 2n, p);
 
         const twos_times_zsq = vec2.multWithScalar(zsq);
 
@@ -100,8 +100,8 @@ class ProofFactory {
         const l0 = a_L.subScalar(z);
         const r0 = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
         if( doAssert ) {
-            const lefthandside = (zsq * v + Maths.delta(y_n, z)) % p;
-            const righthandside = (l0.multVectorToScalar(r0)) % p;
+            const lefthandside = Maths.mod(zsq * v + Maths.delta(y_n, z), p);
+            const righthandside = Maths.mod(l0.multVectorToScalar(r0), p);
 
             // Now we got a single vector product proving our 3 statements which can be easily verified
             // as is done below:
@@ -167,9 +167,9 @@ class ProofFactory {
         const l1 = s_L.clone();
         const r1 = y_n.multVector(s_R);
 
-        const t0 = l0.multVectorToScalar(r0) % p;
-        const t2 = l1.multVectorToScalar(r1) % p;
-        const t1 = (l0.addVector(l1).multVectorToScalar(r0.addVector(r1)) - t0 - t2) % p;
+        const t0 = Maths.mod(l0.multVectorToScalar(r0), p);
+        const t2 = Maths.mod(l1.multVectorToScalar(r1), p);
+        const t1 = Maths.mod(l0.addVector(l1).multVectorToScalar(r0.addVector(r1)) - t0 - t2, p);
 
         const t1_bf = randomNum(p);
         const T1 = Utils.getPedersenCommitment(t1, t1_bf, H);
@@ -181,9 +181,9 @@ class ProofFactory {
         const zP = Utils.scalarToPoint(z.toString(16));
         const x = Utils.getFiatShamirChallenge(zP, p);
 
-        const xsq = (x ** 2n) % p;
-        const tx = t0 + t1 * x + t2 * xsq;
-        const tx_bf = zsq * bf + x * t1_bf + t2_bf * xsq;
+        const xsq = Maths.mod(x ** 2n, p);
+        const tx = Maths.mod(t0 + t1 * x + t2 * xsq, p);
+        const tx_bf = Maths.mod(zsq * bf + x * t1_bf + t2_bf * xsq, p);
         // Send openings tx and tx_bf back to the verifier
 
         if( doAssert ) {
@@ -198,7 +198,7 @@ class ProofFactory {
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).add(G.mul(Bdelta)).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 2 of the term");
             assert(Utils.getPedersenCommitment(t0, zsq * bf).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 3 of the term");
             assert(Utils.getPedersenCommitment(x * t1, x * t1_bf).eq(T1.mul(Bx), "partial equality 4 of the term"));
-            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf)).eq(T2.mul(Bxsq), "partial equality 5 of the term");
+            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf).eq(T2.mul(Bxsq), "partial equality 5 of the term"));
 
 
             const leftEq = Utils.getPedersenCommitment(tx, tx_bf, H);

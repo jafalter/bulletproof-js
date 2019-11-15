@@ -3,6 +3,7 @@ const assert = require('assert');
 
 const Factory = require('../src/ProofFactory');
 const Utils = require('../src/Utils');
+const Maths = require('../src/Maths');
 const secp256k1 = require('../src/Constants').secp256k1;
 
 const ec = new EC('secp256k1');
@@ -35,13 +36,14 @@ describe('Tests for the rangeproof', () => {
     });
 
     it('Test mult properties of pedersen with negative num', () => {
-        const t1 = -4424687248756834944667496427199067151987779098219282389160949909025658367322n;
-        const x = 38659561957554344830346811456777626115164894886626759056962864666140509109118n;
+        const p = secp256k1.p;
+        const t1 = Maths.mod(-4424687248756834944667496427199067151987779098219282389160949909025658367322n, p);
+        const x = Maths.mod(38659561957554344830346811456777626115164894886626759056962864666140509109118n, p);
         const xBN  = Utils.toBN(x);
-        const r = 206032474729127474062261152183333172264689698899312462254655119185748812599n;
+        const r = Maths.mod(206032474729127474062261152183333172264689698899312462254655119185748812599n, p);
 
         const T1 = Utils.getPedersenCommitment(t1, r);
-        const T1cmp = Utils.getPedersenCommitment(t1 * x, r * x);
+        const T1cmp = Utils.getPedersenCommitment(Maths.mod(t1 * x, p), Maths.mod(r * x, p));
 
         assert(T1.mul(xBN).eq(T1cmp));
     });

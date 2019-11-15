@@ -1,3 +1,5 @@
+const Maths = require('./Maths');
+
 class Vector {
 
     /**
@@ -23,24 +25,39 @@ class Vector {
      * Generate a Vector with y^n
      * while y^n = (1,y,y^2,...,y^n-1)
      *
-     * @param y
-     * @param n
+     * @param y {BigInt} initial number
+     * @param n {BigInt} the last exponent
+     * @param p {BigInt} optional number if calculations should be mod p
      * @return {Vector}
      */
-    static getVectorToPowerN(y, n) {
+    static getVectorToPowerN(y, n, p = false) {
         if( typeof y !== 'bigint' || typeof n !== 'bigint' ) {
             throw new Error("Please provide y and n as bigints");
         }
 
         const vec = new Vector();
         for( let i = 0n; i < n; i++ ) {
-            vec.addElem(y ** i);
+            if( typeof  p === 'bigint' ) {
+                vec.addElem(Maths.mod(y ** i, p))
+            }
+            else {
+                vec.addElem(y ** i);
+            }
         }
         return vec;
     }
 
-    constructor() {
+    /**
+     * Optional parameter
+     * If passed, all operations will
+     * be calculated in the group p
+     *
+     * @param p {BigInt}
+     */
+    constructor(p=false) {
         this.elems = [];
+        this.mod = p !== false;
+        this.p = p;
     }
 
     /**
@@ -66,7 +83,12 @@ class Vector {
         if( typeof e !== 'bigint' ) {
             throw new Error("Please only use BigInt values for the vector");
         }
-        this.elems.push(e);
+        if( this.mod ) {
+            this.elems.push(Maths.mod(e, this.p))
+        }
+        else {
+            this.elems.push(e);
+        }
     }
 
     /**
@@ -107,7 +129,12 @@ class Vector {
         if( typeof val !== 'bigint' ) {
             throw new Error("Can only set bigint values in the vector");
         }
-        this.elems[i] = val;
+        if( this.mod ) {
+            this.elems[i] = Maths.mod(val, this.p);
+        }
+        else {
+            this.elems[i] = val;
+        }
     }
 
     /**
@@ -125,20 +152,24 @@ class Vector {
      * Multiply two vectors with a vector as result
      *
      * @param v2 {Vector} the other vector to muliply with
-     * @param mod {BigInt} optional modulus for multiplication
      * @return {Vector} the resulting vector
      */
-    multVector(v2, mod=false) {
+    multVector(v2) {
         if( this.length() !== v2.length() ) {
             throw new Error("Vectors to be multiplied must be same length");
         }
-        const v = new Vector();
+        const v = new Vector(this.p);
         for( let i = 0; i < this.length(); i++ ) {
             if( typeof this.get(i) !== 'bigint' || typeof v2.get(i) !== 'bigint' ) {
                 throw new Error("Vectors must only contain bigint values");
             }
             const result = this.get(i) * v2.get(i);
-            v.addElem(mod ? result % mod : result);
+            if( this.mod ) {
+                v.addElem(Maths.mod(result, this.p));
+            }
+            else {
+                v.addElem(result);
+            }
         }
         return v;
     }
@@ -155,7 +186,12 @@ class Vector {
             throw new Error("Scalar sc has to be of type bigint");
         }
         for( let i = 0; i < this.length(); i++ ) {
-            v.addElem(this.get(i) * sc);
+            if( this.mod ) {
+                v.addElem(Maths.mod(this.get(i) * sc, this.p));
+            }
+            else {
+                v.addElem(this.get(i) * sc);
+            }
         }
         return v;
     }
@@ -187,7 +223,12 @@ class Vector {
             if( typeof val !== 'bigint' ) {
                 throw new Error("Vector may only contain bigints");
             }
-            v.addElem(val - sc);
+            if( this.mod ) {
+                v.addElem(Maths.mod(val - sc, this.p));
+            }
+            else {
+                v.addElem(val - sc);
+            }
         }
         return v;
     }
@@ -204,7 +245,12 @@ class Vector {
             throw new Error("Scalar must be bigint");
         }
         for( let i = 0; i < this.length(); i++ ) {
-            v.addElem(this.get(i) + sc);
+            if( this.mod ) {
+                v.addElem(Maths.mod(this.get(i) + sc, this.p));
+            }
+            else {
+                v.addElem(this.get(i) + sc);
+            }
         }
         return v;
     }
@@ -224,7 +270,13 @@ class Vector {
             throw new Error("Added vectors need to be same length");
         }
         for( let i = 0; i < this.length(); i++ ) {
-            v.addElem(this.get(i) + vec.get(i));
+            if( this.mod ) {
+                v.addElem(Maths.mod(this.get(i) + vec.get(i)), this.p);
+            }
+            else {
+                v.addElem(this.get(i) + vec.get(i));
+            }
+
         }
         return v;
     }
@@ -237,7 +289,12 @@ class Vector {
     toScalar() {
         let result = 0n;
         for( let i = 0; i < this.length(); i++ ) {
-            result = result + this.get(i);
+            if( this.mod ) {
+                result = Maths.mod(result + this.get(i), this.p);
+            }
+            else {
+                result = result + this.get(i);
+            }
         }
         return result;
     }

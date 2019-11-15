@@ -2,6 +2,8 @@ const sha256 = require('js-sha256').sha256;
 const EC = require('elliptic').ec;
 const BN = require('bn.js');
 
+const Maths = require('./Maths');
+
 const ec = new EC('secp256k1');
 
 class Utils {
@@ -118,7 +120,7 @@ class Utils {
         }
         const hex = Utils.sha256pointtohex(commitment);
         const num = BigInt('0x' + hex);
-        return num % mod;
+        return Maths.mod(num, mod);
     }
 
     /**
