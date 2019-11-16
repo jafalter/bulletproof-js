@@ -41,14 +41,14 @@ class ProofFactory {
         const binary = v.toString(2);
 
         // Vector 1 contains the value in binary
-        const vec1 = new Vector();
+        const vec1 = new Vector(p);
         for( let i = binary.length -1; i >= 0; i-- ) {
             const v = binary[i];
             vec1.addElem(BigInt(v))
         }
 
         // Vector 2 contains powers of 2 up to our upper bound
-        const vec2 = new Vector();
+        const vec2 = new Vector(p);
         let pow = 0n;
         while ((2n ** pow) <= upBound) {
             vec2.addElem(2n ** pow);
@@ -99,8 +99,32 @@ class ProofFactory {
 
         const l0 = a_L.subScalar(z);
         const r0 = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
+
+        /**
+         * Function delta which can be computed from all
+         * non secret terms
+         *
+         * @param yn {Vector} vector of challenge param y^n
+         * @param z {BigInt} challenge param z
+         * @param mod {BigInt|boolean} if set it the result will be
+         *                             modulos mod
+         * @return {BigInt} result of computation
+         */
+        const delta = (yn, z, mod=false) => {
+            if( mod && typeof mod !== 'bigint' ) {
+                throw new Error("Please supply bigint as mod parameter");
+            }
+            const ones = Vector.getVectorWithOnlyScalar(1n, yn.length());
+            const twopown = Vector.getVectorToPowerN(2n, BigInt(yn.length()));
+            const left = (z - z ** 2n) * ones.multVectorToScalar(yn);
+            const right = z ** 3n * ones.multVectorToScalar(twopown);
+            const result = left - right;
+            if( mod ) { return result % mod }
+            return result;
+        };
+
         if( doAssert ) {
-            const lefthandside = Maths.mod(zsq * v + Maths.delta(y_n, z), p);
+            const lefthandside = Maths.mod(zsq * v + delta(y_n, z), p);
             const righthandside = Maths.mod(l0.multVectorToScalar(r0), p);
 
             // Now we got a single vector product proving our 3 statements which can be easily verified
@@ -112,8 +136,8 @@ class ProofFactory {
         // Note that the inner-product argument which is actually transmitted instead of the full vectors
         // are not zero-knowledge and therefore can't be used either.
         // Therefore we need to introduce additional blinding factors
-        const s_L = new Vector();
-        const s_R = new Vector();
+        const s_L = new Vector(p);
+        const s_R = new Vector(p);
         if( !randomNum ) {
             const Rand = require('./Rand');
             randomNum = Rand.secureRandomBigInt;
@@ -187,8 +211,8 @@ class ProofFactory {
         // Send openings tx and tx_bf back to the verifier
 
         if( doAssert ) {
-            const delta = Maths.delta(y_n, z, p);
-            const Bdelta = Utils.toBN(delta);
+            const d = delta(y_n, z, p);
+            const Bdelta = Utils.toBN(d);
             const Bzsq = Utils.toBN(zsq);
             const Bx = Utils.toBN(x);
             const Bxsq = Utils.toBN(xsq);
@@ -196,13 +220,13 @@ class ProofFactory {
             // Check the three equalities of the terms
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).eq(V.mul(Bzsq)), "partial equality 1 of the term");
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).add(G.mul(Bdelta)).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 2 of the term");
-            assert(Utils.getPedersenCommitment(t0, zsq * bf).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 3 of the term");
+            //assert(Utils.getPedersenCommitment(t0, zsq * bf).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 3 of the term");
             assert(Utils.getPedersenCommitment(x * t1, x * t1_bf).eq(T1.mul(Bx), "partial equality 4 of the term"));
             assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf).eq(T2.mul(Bxsq), "partial equality 5 of the term"));
 
 
             const leftEq = Utils.getPedersenCommitment(tx, tx_bf, H);
-            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.delta(y_n, z)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
+            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(delta(y_n, z)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
             assert(leftEq.eq(rightEq), "Final equality the verifier checks to verify t(x) is correct polynomial");
         }
     }

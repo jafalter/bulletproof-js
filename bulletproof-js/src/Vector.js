@@ -1,4 +1,4 @@
-const Maths = require('./Maths');
+const Maths = require('./Maths.js');
 
 class Vector {
 
