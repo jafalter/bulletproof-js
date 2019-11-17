@@ -4,11 +4,24 @@ const assert = require('assert');
 const Factory = require('../src/ProofFactory');
 const Utils = require('../src/Utils');
 const Maths = require('../src/Maths');
+const Vector = require('../src/Vector');
 const secp256k1 = require('../src/Constants').secp256k1;
 
 const ec = new EC('secp256k1');
 
 describe('Tests for the rangeproof', () => {
+
+    it('Test for exponent vectors', () => {
+        const y = 897109873401987290187239812793n;
+        const n = secp256k1.n;
+        const e = 64n;
+        const y_n = Vector.getVectorToPowerE(y, e, n);
+        const y_negn = Vector.getVectorToPowerE(-y, e, n);
+        const P = ec.g.mul(Utils.toBN(98712398123n));
+        const Pt1 = y_n.multVectorWithPointToPoint(P);
+        const Pt2 = y_negn.multVectorWithPointToPoint(Pt1);
+        assert(Pt2.eq(P));
+    });
 
     it('Test additive homomorphic quality of pedersen commitments', () => {
         const v1 = 9018549012398012093n;

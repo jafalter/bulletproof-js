@@ -1,4 +1,5 @@
 const Maths = require('./Maths.js');
+const Utils = require('./Utils');
 
 class Vector {
 
@@ -8,13 +9,14 @@ class Vector {
      *
      * @param sc {BigInt} the scalar
      * @param len {number} how many elements the vector should have
+     * @param n {BigInt} optional group order
      * @return {Vector} vector
      */
-    static getVectorWithOnlyScalar(sc, len) {
+    static getVectorWithOnlyScalar(sc, len, n=false) {
         if( typeof sc !== 'bigint' ) {
             throw new Error("Scalar i has to be a bigint");
         }
-        const v = new Vector();
+        const v = new Vector(n);
         for( let i = 0; i < len; i++ ) {
             v.addElem(sc);
         }
@@ -30,12 +32,12 @@ class Vector {
      * @param n {BigInt} optional number if calculations should be mod n
      * @return {Vector}
      */
-    static getVectorToPowerN(y, e, n = false) {
+    static getVectorToPowerE(y, e, n = false) {
         if( typeof y !== 'bigint' || typeof e !== 'bigint' ) {
             throw new Error("Please provide y and n as bigints");
         }
 
-        const vec = new Vector();
+        const vec = new Vector(n);
         for( let i = 0n; i < e; i++ ) {
             if( typeof  n === 'bigint' ) {
                 vec.addElem(Maths.mod(y ** i, n))
@@ -146,6 +148,21 @@ class Vector {
      */
     multVectorToScalar(v2, mod=false) {
         return this.multVector(v2, mod).toScalar();
+    }
+
+    /**
+     * Mulitply vector with a ec Point
+     * and receive another Point
+     *
+     * @param G {Point}
+     * @return {Point}
+     */
+    multVectorWithPointToPoint(G) {
+        let P = G.mul(Utils.toBN(this.get(0)));
+        for( let i = 1; i < this.length(); i++ ) {
+            P.add(G.mul(Utils.toBN(this.get(i))));
+        }
+        return P;
     }
 
     /**

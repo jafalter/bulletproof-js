@@ -38,6 +38,10 @@ class ProofFactory {
         if( v < lowBound || v > upBound ) {
             throw new Error("val must be in the range [lowBound, upBound]");
         }
+        if( !randomNum ) {
+            const Rand = require('./Rand');
+            randomNum = Rand.secureRandomBigInt;
+        }
         const binary = v.toString(2);
 
         // Vector 1 contains the value in binary
@@ -67,6 +71,9 @@ class ProofFactory {
         // To match notation with reference
         const a_L = vec1;
         const a_R = vec1.subScalar(1n);
+        // Commit to those values in a pedersen commitment (is needed later)
+        const a_bf = randomNum(n);
+        const A = Utils.getVectorPedersenCommitment(a_L, a_R, a_bf, n, H);
         if( doAssert ) assert(a_L.multVectorToScalar(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
 
         /*
@@ -85,8 +92,9 @@ class ProofFactory {
         */
 
         const y = Utils.getFiatShamirChallenge(V, n);
-        const y_n = Vector.getVectorToPowerN( y, BigInt(a_L.length()) );
-        if( doAssert ) assert(y_n.length() === a_L.length() && y_n.length() === a_R.length(), "All vectors should be same length");
+        const y_e = Vector.getVectorToPowerE( y, BigInt(a_L.length()), n );
+        const y_nege = Vector.getVectorToPowerE( -y, BigInt(a_L.length()), n);
+        if( doAssert ) assert(y_e.length() === a_L.length() && y_e.length() === a_R.length(), "All vectors should be same length");
 
         const yP = Utils.scalarToPoint(y.toString(16));
         const z = Utils.getFiatShamirChallenge(yP, n);
@@ -98,7 +106,7 @@ class ProofFactory {
         const a_R_plusz = a_R.addScalar(z);
 
         const l0 = a_L.subScalar(z);
-        const r0 = y_n.multVector(a_R_plusz).addVector(twos_times_zsq);
+        const r0 = y_e.multVector(a_R_plusz).addVector(twos_times_zsq);
 
         /**
          * Function delta which can be computed from all
@@ -114,8 +122,8 @@ class ProofFactory {
             if( mod && typeof mod !== 'bigint' ) {
                 throw new Error("Please supply bigint as mod parameter");
             }
-            const ones = Vector.getVectorWithOnlyScalar(1n, yn.length());
-            const twopown = Vector.getVectorToPowerN(2n, BigInt(yn.length()));
+            const ones = Vector.getVectorWithOnlyScalar(1n, yn.length(), n);
+            const twopown = Vector.getVectorToPowerE(2n, BigInt(yn.length(), n));
             const left = (z - z ** 2n) * ones.multVectorToScalar(yn);
             const right = z ** 3n * ones.multVectorToScalar(twopown);
             const result = left - right;
@@ -124,7 +132,7 @@ class ProofFactory {
         };
 
         if( doAssert ) {
-            const lefthandside = Maths.mod(zsq * v + delta(y_n, z), n);
+            const lefthandside = Maths.mod(zsq * v + delta(y_e, z), n);
             const righthandside = Maths.mod(l0.multVectorToScalar(r0), n);
 
             // Now we got a single vector product proving our 3 statements which can be easily verified
@@ -138,16 +146,15 @@ class ProofFactory {
         // Therefore we need to introduce additional blinding factors
         const s_L = new Vector(n);
         const s_R = new Vector(n);
-        if( !randomNum ) {
-            const Rand = require('./Rand');
-            randomNum = Rand.secureRandomBigInt;
-        }
         for( let i = 0; i < len; i++ ) {
             const r1 = randomNum(n);
             const r2 = randomNum(n);
             s_L.addElem(r1);
             s_R.addElem(r2);
         }
+        // We need to commit to s_L and s_R
+        const s_bf = randomNum(n);
+        const S = Utils.getVectorPedersenCommitment(s_L, s_R, s_bf, n, H);
 
         // The blinded l(x) and r(x) have a_L and a_R replaced by
         // blinded terms a_L + s_L*x and a_R + s_R*x
@@ -171,7 +178,7 @@ class ProofFactory {
          * @return {Vector}
          */
         const r = (x) => {
-            return y_n.multVector(a_R.addVector(s_R.multWithScalar(x)).addScalar(z)).addVector(twos_times_zsq)
+            return y_e.multVector(a_R.addVector(s_R.multWithScalar(x)).addScalar(z)).addVector(twos_times_zsq)
         };
 
         /**
@@ -189,7 +196,7 @@ class ProofFactory {
         // Now we need to commit to T1 = Com(t1), and T2 = Com(t2)
         // Together with V (our original commitment) those are sent to the verifier
         const l1 = s_L.clone();
-        const r1 = y_n.multVector(s_R);
+        const r1 = y_e.multVector(s_R);
 
         const t0 = Maths.mod(l0.multVectorToScalar(r0), n);
         const t2 = Maths.mod(l1.multVectorToScalar(r1), n);
@@ -211,23 +218,39 @@ class ProofFactory {
         // Send openings tx and tx_bf back to the verifier
 
         if( doAssert ) {
-            const d = delta(y_n, z, n);
+            const d = delta(y_e, z, n);
             const Bdelta = Utils.toBN(d);
             const Bzsq = Utils.toBN(zsq);
             const Bx = Utils.toBN(x);
             const Bxsq = Utils.toBN(xsq);
 
-            // Check the three equalities of the terms
+            // Check the sub equalities of the terms
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, n, H).eq(V.mul(Bzsq)), "partial equality 1 of the term");
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, n, H).add(G.mul(Bdelta)).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 2 of the term");
-            //assert(Utils.getPedersenCommitment(t0, zsq * bf).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 3 of the term");
-            assert(Utils.getPedersenCommitment(x * t1, x * t1_bf, n, H).eq(T1.mul(Bx), "partial equality 4 of the term"));
-            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf, n, H).eq(T2.mul(Bxsq), "partial equality 5 of the term"));
+            assert(Utils.getPedersenCommitment(x * t1, x * t1_bf, n, H).eq(T1.mul(Bx), "partial equality 3 of the term"));
+            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf, n, H).eq(T2.mul(Bxsq), "partial equality 4 of the term"));
 
-
+            // The complete equality
             const leftEq = Utils.getPedersenCommitment(tx, tx_bf, n, H);
-            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(delta(y_n, z)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
+            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(delta(y_e, z)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
             assert(leftEq.eq(rightEq), "Final equality the verifier checks to verify t(x) is correct polynomial");
+        }
+
+        // Now we need to prove to the verifier that l(x) and r(x) are correct
+        // For that we need to give the opening e of the combined blinding factors used
+        // for the commitments A and S
+        const e = Maths.mod(a_bf + ( x * s_bf ), n);
+        if( doAssert ) {
+            // transmutating the generator H such that we can verify r(x)
+            const H2 = y_nege.multVectorWithPointToPoint(H);
+
+            // Final verification
+            const nege = Maths.mod(-e, n);
+            const Bnege = Utils.toBN(nege);
+            const Bx = Utils.toBN(x);
+
+            // TODO finish
+            const P = H.mul(negeBN).add(A).add(S.mul(Bx));
         }
     }
 }

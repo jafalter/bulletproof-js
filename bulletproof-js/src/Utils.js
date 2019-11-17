@@ -154,13 +154,34 @@ class Utils {
      * @param H {Point} Second generator point used in the commitment
      */
     static getPedersenCommitment(v, x, n=false, H=false) {
-        if( !H ) {
-            H = Utils.getHFromHashingG(ec.g);
-        }
         const G = ec.g;
+        if( !H ) {
+            H = Utils.getHFromHashingG(G);
+        }
         const x_BN = Utils.toBN(n ? Maths.mod(x, n) : x);
         const v_BN = Utils.toBN(n ? Maths.mod(v, n) : x);
         return G.mul(v_BN).add(H.mul(x_BN))
+    }
+
+    /**
+     * Generate a Vector Pedersen Commitment with blinding factor x
+     *
+     * @param l {Vector} Vector 1
+     * @param r {Vector} Vector 2
+     * @param x {BigInt} blinding factor
+     * @param n {BigInt} optional group order
+     * @param H {Point} second Generator (If non provided we sha256 hash G)
+     * @return {Point}
+     */
+    static getVectorPedersenCommitment(l, r, x, n=false, H=false) {
+        const G = ec.g;
+        if( !H ) {
+            H = Utils.getHFromHashingG(G);
+        }
+        const P1 = l.multVectorWithPointToPoint(G);
+        const P2 = r.multVectorWithPointToPoint(H);
+        const B = H.mul(Utils.toBN(x));
+        return P1.add(P2).add(B);
     }
 }
 
