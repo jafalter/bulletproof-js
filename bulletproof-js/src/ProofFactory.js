@@ -19,12 +19,12 @@ class ProofFactory {
      * @param H {Point} generator H used in pedersen
      * @param lowBound {BigInt} the lower bound of the rangeproof. Please use BigInt not number
      * @param upBound {BigInt} the upper bound of the rangeproof. Please use BigInt not number
-     * @param p {BigInt} elliptic curve mod used for computation of the proof
+     * @param n {BigInt} Order of the group. All calculations will be mod n
      * @param doAssert {boolean} if we should do asserts. Should be set to false in production for performance gains
      * @param randomNum {boolean|function} optional random bigint generating function
      * @return {RangeProof} Final rangeproof which can be verified
      */
-    static computeBulletproof(v, bf, V, G, H, lowBound, upBound, p, doAssert=true, randomNum=false) {
+    static computeBulletproof(v, bf, V, G, H, lowBound, upBound, n, doAssert=true, randomNum=false) {
 
         if( typeof v !== "bigint" || typeof  bf !== "bigint" || typeof lowBound !== "bigint" || typeof upBound !== "bigint" ) {
             throw new Error("Parameters val, x, low and upper bound have to be bigints");
@@ -41,20 +41,20 @@ class ProofFactory {
         const binary = v.toString(2);
 
         // Vector 1 contains the value in binary
-        const vec1 = new Vector(p);
+        const vec1 = new Vector(n);
         for( let i = binary.length -1; i >= 0; i-- ) {
             const v = binary[i];
             vec1.addElem(BigInt(v))
         }
 
         // Vector 2 contains powers of 2 up to our upper bound
-        const vec2 = new Vector(p);
+        const vec2 = new Vector(n);
         let pow = 0n;
         while ((2n ** pow) <= upBound) {
             vec2.addElem(2n ** pow);
             pow++;
         }
-        const n = BigInt(vec2.length());
+        const len = BigInt(vec2.length());
 
         if( doAssert ) assert(vec1.length() <= vec2.length(), "Vector 1 length can't be greater then vec2");
         while ( vec1.length() < vec2.length() ) {
@@ -84,13 +84,13 @@ class ProofFactory {
         * https://doc-internal.dalek.rs/bulletproofs/notes/range_proof/index.html
         */
 
-        const y = Utils.getFiatShamirChallenge(V, p);
+        const y = Utils.getFiatShamirChallenge(V, n);
         const y_n = Vector.getVectorToPowerN( y, BigInt(a_L.length()) );
         if( doAssert ) assert(y_n.length() === a_L.length() && y_n.length() === a_R.length(), "All vectors should be same length");
 
         const yP = Utils.scalarToPoint(y.toString(16));
-        const z = Utils.getFiatShamirChallenge(yP, p);
-        const zsq = Maths.mod(z ** 2n, p);
+        const z = Utils.getFiatShamirChallenge(yP, n);
+        const zsq = Maths.mod(z ** 2n, n);
 
         const twos_times_zsq = vec2.multWithScalar(zsq);
 
@@ -124,8 +124,8 @@ class ProofFactory {
         };
 
         if( doAssert ) {
-            const lefthandside = Maths.mod(zsq * v + delta(y_n, z), p);
-            const righthandside = Maths.mod(l0.multVectorToScalar(r0), p);
+            const lefthandside = Maths.mod(zsq * v + delta(y_n, z), n);
+            const righthandside = Maths.mod(l0.multVectorToScalar(r0), n);
 
             // Now we got a single vector product proving our 3 statements which can be easily verified
             // as is done below:
@@ -136,15 +136,15 @@ class ProofFactory {
         // Note that the inner-product argument which is actually transmitted instead of the full vectors
         // are not zero-knowledge and therefore can't be used either.
         // Therefore we need to introduce additional blinding factors
-        const s_L = new Vector(p);
-        const s_R = new Vector(p);
+        const s_L = new Vector(n);
+        const s_R = new Vector(n);
         if( !randomNum ) {
             const Rand = require('./Rand');
             randomNum = Rand.secureRandomBigInt;
         }
-        for( let i = 0; i < n; i++ ) {
-            const r1 = randomNum(p);
-            const r2 = randomNum(p);
+        for( let i = 0; i < len; i++ ) {
+            const r1 = randomNum(n);
+            const r2 = randomNum(n);
             s_L.addElem(r1);
             s_R.addElem(r2);
         }
@@ -191,41 +191,41 @@ class ProofFactory {
         const l1 = s_L.clone();
         const r1 = y_n.multVector(s_R);
 
-        const t0 = Maths.mod(l0.multVectorToScalar(r0), p);
-        const t2 = Maths.mod(l1.multVectorToScalar(r1), p);
-        const t1 = Maths.mod(l0.addVector(l1).multVectorToScalar(r0.addVector(r1)) - t0 - t2, p);
+        const t0 = Maths.mod(l0.multVectorToScalar(r0), n);
+        const t2 = Maths.mod(l1.multVectorToScalar(r1), n);
+        const t1 = Maths.mod(l0.addVector(l1).multVectorToScalar(r0.addVector(r1)) - t0 - t2, n);
 
-        const t1_bf = randomNum(p);
-        const T1 = Utils.getPedersenCommitment(t1, t1_bf, H);
+        const t1_bf = randomNum(n);
+        const T1 = Utils.getPedersenCommitment(t1, t1_bf, n, H);
 
-        const t2_bf = randomNum(p);
-        const T2 = Utils.getPedersenCommitment(t2, t2_bf, H);
+        const t2_bf = randomNum(n);
+        const T2 = Utils.getPedersenCommitment(t2, t2_bf, n, H);
 
         // Now we get the challenge point x
         const zP = Utils.scalarToPoint(z.toString(16));
-        const x = Utils.getFiatShamirChallenge(zP, p);
+        const x = Utils.getFiatShamirChallenge(zP, n);
 
-        const xsq = Maths.mod(x ** 2n, p);
-        const tx = Maths.mod(t0 + t1 * x + t2 * xsq, p);
-        const tx_bf = Maths.mod(zsq * bf + x * t1_bf + t2_bf * xsq, p);
+        const xsq = Maths.mod(x ** 2n, n);
+        const tx = Maths.mod(t0 + t1 * x + t2 * xsq, n);
+        const tx_bf = Maths.mod(zsq * bf + x * t1_bf + t2_bf * xsq, n);
         // Send openings tx and tx_bf back to the verifier
 
         if( doAssert ) {
-            const d = delta(y_n, z, p);
+            const d = delta(y_n, z, n);
             const Bdelta = Utils.toBN(d);
             const Bzsq = Utils.toBN(zsq);
             const Bx = Utils.toBN(x);
             const Bxsq = Utils.toBN(xsq);
 
             // Check the three equalities of the terms
-            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).eq(V.mul(Bzsq)), "partial equality 1 of the term");
-            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf).add(G.mul(Bdelta)).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 2 of the term");
+            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, n, H).eq(V.mul(Bzsq)), "partial equality 1 of the term");
+            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, n, H).add(G.mul(Bdelta)).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 2 of the term");
             //assert(Utils.getPedersenCommitment(t0, zsq * bf).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 3 of the term");
-            assert(Utils.getPedersenCommitment(x * t1, x * t1_bf).eq(T1.mul(Bx), "partial equality 4 of the term"));
-            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf).eq(T2.mul(Bxsq), "partial equality 5 of the term"));
+            assert(Utils.getPedersenCommitment(x * t1, x * t1_bf, n, H).eq(T1.mul(Bx), "partial equality 4 of the term"));
+            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf, n, H).eq(T2.mul(Bxsq), "partial equality 5 of the term"));
 
 
-            const leftEq = Utils.getPedersenCommitment(tx, tx_bf, H);
+            const leftEq = Utils.getPedersenCommitment(tx, tx_bf, n, H);
             const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(delta(y_n, z)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
             assert(leftEq.eq(rightEq), "Final equality the verifier checks to verify t(x) is correct polynomial");
         }

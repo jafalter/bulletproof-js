@@ -150,15 +150,16 @@ class Utils {
      *
      * @param v {BigInt} The value we want to commit to
      * @param x {BigInt} The blinding factor
+     * @param n {BigInt} Optional group order
      * @param H {Point} Second generator point used in the commitment
      */
-    static getPedersenCommitment(v, x, H=null) {
-        if( H === null ) {
+    static getPedersenCommitment(v, x, n=false, H=false) {
+        if( !H ) {
             H = Utils.getHFromHashingG(ec.g);
         }
         const G = ec.g;
-        const x_BN = Utils.toBN(x);
-        const v_BN = Utils.toBN(v);
+        const x_BN = Utils.toBN(n ? Maths.mod(x, n) : x);
+        const v_BN = Utils.toBN(n ? Maths.mod(v, n) : x);
         return G.mul(v_BN).add(H.mul(x_BN))
     }
 }
