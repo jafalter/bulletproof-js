@@ -288,7 +288,7 @@ class Vector {
         }
         for( let i = 0; i < this.length(); i++ ) {
             if( this.mod ) {
-                v.addElem(Maths.mod(this.get(i) + vec.get(i)), this.n);
+                v.addElem(Maths.mod(this.get(i) + vec.get(i), this.n));
             }
             else {
                 v.addElem(this.get(i) + vec.get(i));

@@ -248,9 +248,15 @@ class ProofFactory {
             const nege = Maths.mod(-e, n);
             const Bnege = Utils.toBN(nege);
             const Bx = Utils.toBN(x);
+            const vec_z = Vector.getVectorWithOnlyScalar(z, y_e.length(), n);
 
-            // TODO finish
-            const P = H.mul(negeBN).add(A).add(S.mul(Bx));
+            const l1 = y_e.multWithScalar(z).addVector(twos_times_zsq);
+            const l2 = vec_z.addVector(y_nege.multWithScalar(zsq).multVector(vec2));
+
+            const P1 = H.mul(Bnege).add(A).add(S.mul(Bx)).add(l1.multVectorWithPointToPoint(H2)).add(vec_z.multVectorWithPointToPoint(G).neg());
+            const P2 = H.mul(Bnege).add(A).add(S.mul(Bx)).add(l2.multVectorWithPointToPoint(H)).add(vec_z.multVectorWithPointToPoint(G).neg());
+
+            assert(P1.eq(P2), 'What the verifier checks to verify that l(x) and r(x) are correct');
         }
     }
 }
