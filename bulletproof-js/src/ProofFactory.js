@@ -224,6 +224,9 @@ class ProofFactory {
             const Bx = Utils.toBN(x);
             const Bxsq = Utils.toBN(xsq);
 
+            // Check t(x) was calculated correctly
+            assert(Maths.mod(tx, n) === Maths.mod(t(x), n));
+
             // Check the sub equalities of the terms
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, n, H).eq(V.mul(Bzsq)), "partial equality 1 of the term");
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, n, H).add(G.mul(Bdelta)).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 2 of the term");
@@ -240,6 +243,23 @@ class ProofFactory {
         // For that we need to give the opening e of the combined blinding factors used
         // for the commitments A and S
         const e = Maths.mod(a_bf + ( x * s_bf ), n);
+
+        /* At this point we calculated everything for the verifier to
+        verify the proof, the final values sen't to the verifier are
+        V       ... Pedersen commitment for which we prove its range
+        A       ... Vector pedersen commitment committing to a_L and a_R the amount split into a vector
+              which is the amount in binary and a vector containing exponents of 2
+        S       ... Vector pedersen commitment committing to s_L and s_R the blinding vectors
+        t(x)    ... Polynomial t() evaluated with challenge x
+        t(x_bf) ... Opening blinding factor for t() to verify the correctness of t(x)
+        e       ... Opening e of the combined blinding factors using in A and S to verify correctness of l(x) and r(x)
+        l(x)    ... left side of the vector
+        r(x)    ... right side of the vector
+
+        Theoretically we could simply transmit l(x) and r(x) to the verifier, since they are blinded
+        however this would need 2n scalars to be transmitted.
+        Using the inner product prove we only need to transmit log(n) communication cost
+         */
         if( doAssert ) {
             // transmutating the generator H such that we can verify r(x)
             const H2 = y_nege.multVectorWithPointToPoint(H);
