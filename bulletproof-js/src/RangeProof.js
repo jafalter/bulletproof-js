@@ -6,7 +6,9 @@ class RangeProof {
      * @return {boolean} true if it could be verified
      *                   false otherwise
      */
-    verify();
+    verify() {
+        return false;
+    }
 }
 
 module.exports = RangeProof;

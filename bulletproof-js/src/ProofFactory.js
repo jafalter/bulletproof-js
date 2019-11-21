@@ -3,6 +3,7 @@ const assert = require('assert');
 const Utils = require('./Utils');
 const Vector = require('./Vector');
 const Maths = require('./Maths');
+const UncompressedBulletproof = require('./UncompressedBulletproof');
 
 class ProofFactory {
 
@@ -235,7 +236,8 @@ class ProofFactory {
 
             // The complete equality
             const leftEq = Utils.getPedersenCommitment(tx, tx_bf, n, H);
-            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(delta(y_e, z)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
+            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.mod(delta(y_e, z), n)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
+
             assert(leftEq.eq(rightEq), "Final equality the verifier checks to verify t(x) is correct polynomial");
         }
 
@@ -247,7 +249,7 @@ class ProofFactory {
         /* At this point we calculated everything for the verifier to
         verify the proof, the final values sen't to the verifier are
         V       ... Pedersen commitment for which we prove its range
-        A       ... Vector pedersen commitment committing to a_L and a_R the amount split into a vector
+        A       ... Vector pedersen commitment committing to a_L deltaand a_R the amount split into a vector
               which is the amount in binary and a vector containing exponents of 2
         S       ... Vector pedersen commitment committing to s_L and s_R the blinding vectors
         t(x)    ... Polynomial t() evaluated with challenge x
@@ -278,6 +280,7 @@ class ProofFactory {
 
             assert(P1.eq(P2), 'What the verifier checks to verify that l(x) and r(x) are correct');
         }
+        return new UncompressedBulletproof(V, A, S, T1, T2, tx, tx_bf, e, l(x), r(x), G, n);
     }
 }
 

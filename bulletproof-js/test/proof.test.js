@@ -102,5 +102,6 @@ describe('Tests for the rangeproof', () => {
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
-    });
+        assert(prf.verify());
+    }).timeout(5000);
 });
