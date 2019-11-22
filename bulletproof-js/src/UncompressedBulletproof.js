@@ -51,6 +51,11 @@ class UncompressedBulletproof extends RangeProof {
         this.rx = rx;
         this.G = G;
         this.n = n;
+
+        // Calculate the challenges y, z, x by using Fiat Shimar
+        this.y = Utils.getFiatShamirChallenge(this.V, this.n);
+        this.z = Utils.getFiatShamirChallenge(Utils.scalarToPoint(y.toString(16)), this.n);
+        this.x = Utils.getFiatShamirChallenge(Utils.scalarToPoint(z.toString(16)), this.n);
     }
 
     verify() {
@@ -58,9 +63,9 @@ class UncompressedBulletproof extends RangeProof {
         const H = Utils.getHFromHashingG(this.G);
 
         // First we calculate the challenges y, z, x by using Fiat Shimar
-        const y = Utils.getFiatShamirChallenge(this.V, this.n);
-        const z = Utils.getFiatShamirChallenge(Utils.scalarToPoint(y.toString(16)), this.n);
-        const x = Utils.getFiatShamirChallenge(Utils.scalarToPoint(z.toString(16)), this.n);
+        const y = this.y;
+        const z = this.z;
+        const x = this.x;
         console.log(`
         Challenges:
         y : ${y}
@@ -84,7 +89,6 @@ class UncompressedBulletproof extends RangeProof {
         const y_nege = Vector.getVectorToPowerE( -y, BigInt(this.lx.length()), this.n);
         const H2 = y_nege.multVectorWithPointToPoint(H);
 
-        // Final verification
         const nege = Maths.mod(-this.e, this.n);
         const Bnege = Utils.toBN(nege);
         const Bx = Utils.toBN(x);
@@ -99,6 +103,54 @@ class UncompressedBulletproof extends RangeProof {
         const P2 = H.mul(Bnege).add(this.A).add(this.S.mul(Bx)).add(l2.multVectorWithPointToPoint(H)).add(vec_z.multVectorWithPointToPoint(this.G).neg());
 
         return P1.eq(P2);
+    }
+
+    /**
+     * Use the inner product compression to
+     * compress size of the vectors to log n
+     */
+    compressProof() {
+        const H = Utils.getHFromHashingG(this.G);
+
+        // Orthogonal generator B
+        const B = Utils.getHFromHashingG(H);
+        // Indeterminate variable w
+        const w = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.x.toString(16)), this.n);
+
+        const P = this.lx.multVectorWithPointToPoint(this.G).add(this.rx.multVectorWithPointToPoint(H));
+        const c = this.lx.multVectorToScalar(this.rx, this.n);
+        const Q = B.mul(w);
+        const P_star = P.add(B.mul(w * c));
+        const k = Math.ceil(Math.log(this.lx.length()));
+
+        /* Now we need k iterations to half the vectors
+           until we arrive at single element vectors
+        */
+        let a_tmp = this.lx.clone();
+        let b_tmp = this.rx.clone();
+        let u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(w.toString(16)), this.n);
+        while (a_tmp.length() > 1) {
+            const u_k_neg = Maths.mod(u_k ** -1, this.n);
+            const a_lo = new Vector(this.n);
+            const a_hi = new Vector(this.n);
+            const half = a_tmp.length() / 2;
+            for( let i = 0; i < a_tmp.length(); i++ ) {
+                if( i < half ) {
+                    a_lo.addElem(a_tmp.get(i));
+                }
+                else {
+                    a_hi.addElem(a_tmp.get(i));
+                }
+            }
+            assert(a_lo.length() === a_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
+            // Now we add the vectors seperated by u_k
+            a_tmp = new Vector(this.n);
+            for ( let i = 0; i < a_lo.length(); i++ ) {
+                a_tmp.addElem(a_lo.get(i) * u_k + u_k_neg * a_hi.get(i));
+            }
+
+            // TODO commitments Lk and Rk and add them to P_0
+        }
     }
 }
 
