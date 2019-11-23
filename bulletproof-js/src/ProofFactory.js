@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 const Utils = require('./Utils');
-const Vector = require('./Vector');
+const BigIntVector = require('./BigIntVector');
 const Maths = require('./Maths');
 const UncompressedBulletproof = require('./UncompressedBulletproof');
 
@@ -46,14 +46,14 @@ class ProofFactory {
         const binary = v.toString(2);
 
         // Vector 1 contains the value in binary
-        const vec1 = new Vector(n);
+        const vec1 = new BigIntVector(n);
         for( let i = binary.length -1; i >= 0; i-- ) {
             const v = binary[i];
             vec1.addElem(BigInt(v))
         }
 
         // Vector 2 contains powers of 2 up to our upper bound
-        const vec2 = new Vector(n);
+        const vec2 = new BigIntVector(n);
         let pow = 0n;
         while ((2n ** pow) <= upBound) {
             vec2.addElem(2n ** pow);
@@ -93,8 +93,8 @@ class ProofFactory {
         */
 
         const y = Utils.getFiatShamirChallenge(V, n);
-        const y_e = Vector.getVectorToPowerE( y, BigInt(a_L.length()), n );
-        const y_nege = Vector.getVectorToPowerE( -y, BigInt(a_L.length()), n);
+        const y_e = BigIntVector.getVectorToPowerE( y, BigInt(a_L.length()), n );
+        const y_nege = BigIntVector.getVectorToPowerE( -y, BigInt(a_L.length()), n);
         if( doAssert ) assert(y_e.length() === a_L.length() && y_e.length() === a_R.length(), "All vectors should be same length");
 
         const yP = Utils.scalarToPoint(y.toString(16));
@@ -113,7 +113,7 @@ class ProofFactory {
          * Function delta which can be computed from all
          * non secret terms
          *
-         * @param yn {Vector} vector of challenge param y^n
+         * @param yn {BigIntVector} vector of challenge param y^n
          * @param z {BigInt} challenge param z
          * @param mod {BigInt|boolean} if set it the result will be
          *                             modulos mod
@@ -123,8 +123,8 @@ class ProofFactory {
             if( mod && typeof mod !== 'bigint' ) {
                 throw new Error("Please supply bigint as mod parameter");
             }
-            const ones = Vector.getVectorWithOnlyScalar(1n, yn.length(), n);
-            const twopown = Vector.getVectorToPowerE(2n, BigInt(yn.length(), n));
+            const ones = BigIntVector.getVectorWithOnlyScalar(1n, yn.length(), n);
+            const twopown = BigIntVector.getVectorToPowerE(2n, BigInt(yn.length(), n));
             const left = (z - z ** 2n) * ones.multVectorToScalar(yn);
             const right = z ** 3n * ones.multVectorToScalar(twopown);
             const result = left - right;
@@ -145,8 +145,8 @@ class ProofFactory {
         // Note that the inner-product argument which is actually transmitted instead of the full vectors
         // are not zero-knowledge and therefore can't be used either.
         // Therefore we need to introduce additional blinding factors
-        const s_L = new Vector(n);
-        const s_R = new Vector(n);
+        const s_L = new BigIntVector(n);
+        const s_R = new BigIntVector(n);
         for( let i = 0; i < len; i++ ) {
             const r1 = randomNum(n);
             const r2 = randomNum(n);
@@ -165,7 +165,7 @@ class ProofFactory {
          * by s_L
          *
          * @param x {BigInt} random number
-         * @return {Vector}
+         * @return {BigIntVector}
          */
         const l = (x) => {
             return a_L.addVector(s_L.multWithScalar(x)).subScalar(z)
@@ -176,7 +176,7 @@ class ProofFactory {
          * by s_R
          *
          * @param x {BigInt} random number
-         * @return {Vector}
+         * @return {BigIntVector}
          */
         const r = (x) => {
             return y_e.multVector(a_R.addVector(s_R.multWithScalar(x)).addScalar(z)).addVector(twos_times_zsq)
@@ -270,7 +270,7 @@ class ProofFactory {
             const nege = Maths.mod(-e, n);
             const Bnege = Utils.toBN(nege);
             const Bx = Utils.toBN(x);
-            const vec_z = Vector.getVectorWithOnlyScalar(z, y_e.length(), n);
+            const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_e.length(), n);
 
             const l1 = y_e.multWithScalar(z).addVector(twos_times_zsq);
             const l2 = vec_z.addVector(y_nege.multWithScalar(zsq).multVector(vec2));

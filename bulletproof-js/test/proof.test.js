@@ -4,7 +4,7 @@ const assert = require('assert');
 const Factory = require('../src/ProofFactory');
 const Utils = require('../src/Utils');
 const Maths = require('../src/Maths');
-const Vector = require('../src/Vector');
+const Vector = require('../src/BigIntVector');
 const secp256k1 = require('../src/Constants').secp256k1;
 
 const ec = new EC('secp256k1');
