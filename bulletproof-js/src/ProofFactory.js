@@ -109,31 +109,8 @@ class ProofFactory {
         const l0 = a_L.subScalar(z);
         const r0 = y_e.multVector(a_R_plusz).addVector(twos_times_zsq);
 
-        /**
-         * Function delta which can be computed from all
-         * non secret terms
-         *
-         * @param yn {BigIntVector} vector of challenge param y^n
-         * @param z {BigInt} challenge param z
-         * @param mod {BigInt|boolean} if set it the result will be
-         *                             modulos mod
-         * @return {BigInt} result of computation
-         */
-        const delta = (yn, z, mod=false) => {
-            if( mod && typeof mod !== 'bigint' ) {
-                throw new Error("Please supply bigint as mod parameter");
-            }
-            const ones = BigIntVector.getVectorWithOnlyScalar(1n, yn.length(), n);
-            const twopown = BigIntVector.getVectorToPowerE(2n, BigInt(yn.length(), n));
-            const left = (z - z ** 2n) * ones.multVectorToScalar(yn);
-            const right = z ** 3n * ones.multVectorToScalar(twopown);
-            const result = left - right;
-            if( mod ) { return result % mod }
-            return result;
-        };
-
         if( doAssert ) {
-            const lefthandside = Maths.mod(zsq * v + delta(y_e, z), n);
+            const lefthandside = Maths.mod(zsq * v + UncompressedBulletproof.delta(y_e, z), n);
             const righthandside = Maths.mod(l0.multVectorToScalar(r0), n);
 
             // Now we got a single vector product proving our 3 statements which can be easily verified
@@ -219,7 +196,7 @@ class ProofFactory {
         // Send openings tx and tx_bf back to the verifier
 
         if( doAssert ) {
-            const d = delta(y_e, z, n);
+            const d = UncompressedBulletproof.delta(y_e, z, n);
             const Bdelta = Utils.toBN(d);
             const Bzsq = Utils.toBN(zsq);
             const Bx = Utils.toBN(x);
@@ -236,7 +213,7 @@ class ProofFactory {
 
             // The complete equality
             const leftEq = Utils.getPedersenCommitment(tx, tx_bf, n, H);
-            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.mod(delta(y_e, z), n)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
+            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.mod(UncompressedBulletproof.delta(y_e, z), n)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
 
             assert(leftEq.eq(rightEq), "Final equality the verifier checks to verify t(x) is correct polynomial");
         }

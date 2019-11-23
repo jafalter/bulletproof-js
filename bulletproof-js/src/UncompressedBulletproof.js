@@ -1,8 +1,12 @@
+var EC = require('elliptic').ec;
+
 const RangeProof = require('./RangeProof');
 const Utils = require('./Utils');
 const BigIntVector = require('./BigIntVector');
 const Maths = require('./Maths');
 const PointVector = require('./PointVector');
+
+var ec = new EC('secp256k1');
 
 /**
  * A bulletproof which can be verified or transformed into
@@ -21,6 +25,31 @@ class UncompressedBulletproof extends RangeProof {
         const result = left - right;
         if( mod ) { return Maths.mod(result, mod); }
         return result;
+    }
+
+    /**
+     * Get UncompressedBulletproof from serialzed
+     * json string
+     *
+     * @param str {string}
+     * @return {UncompressedBulletproof}
+     */
+    static fromJsonString(str) {
+        const obj = JSON.parse(str);
+        return new UncompressedBulletproof(
+            ec.keyFromPublic(obj.V, 'hex').pub,
+            ec.keyFromPublic(obj.A, 'hex').pub,
+            ec.keyFromPublic(obj.S, 'hex').pub,
+            ec.keyFromPublic(obj.T1, 'hex').pub,
+            ec.keyFromPublic(obj.T2, 'hex').pub,
+            BigInt(obj.tx),
+            BigInt(obj.txbf),
+            BigInt(obj.e),
+            BigIntVector.getFromObject(obj.lx),
+            BigIntVector.getFromObject(obj.rx),
+            ec.keyFromPublic(obj.G, 'hex').pub,
+            BigInt(obj.n),
+        )
     }
 
     /**
@@ -55,8 +84,53 @@ class UncompressedBulletproof extends RangeProof {
 
         // Calculate the challenges y, z, x by using Fiat Shimar
         this.y = Utils.getFiatShamirChallenge(this.V, this.n);
-        this.z = Utils.getFiatShamirChallenge(Utils.scalarToPoint(y.toString(16)), this.n);
-        this.x = Utils.getFiatShamirChallenge(Utils.scalarToPoint(z.toString(16)), this.n);
+        this.z = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.y.toString(16)), this.n);
+        this.x = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.z.toString(16)), this.n);
+    }
+
+    /**
+     *
+     * @param e {UncompressedBulletproof}
+     * @return {boolean}
+     */
+    equals(e) {
+        if( !(e instanceof UncompressedBulletproof) ) {
+            return false;
+        }
+        return this.V.eq(e.V) &&
+               this.A.eq(e.A) &&
+               this.S.eq(e.S) &&
+               this.T1.eq(e.T1) &&
+               this.T2.eq(e.T2) &&
+               this.tx === e.tx &&
+               this.txbf === e.txbf &&
+               this.e === e.e &&
+               this.lx.equals(e.lx) &&
+               this.rx.equals(e.rx) &&
+               this.G.eq(e.G) &&
+               this.n === e.n;
+    }
+
+    /**
+     * Serialize Uncompressed proof into a JSON string
+     *
+     * @return {string}
+     */
+    toJson() {
+        return JSON.stringify({
+            V : this.V.encode('hex'),
+            A : this.A.encode('hex'),
+            S : this.S.encode('hex'),
+            T1 : this.T1.encode('hex'),
+            T2 : this.T2.encode('hex'),
+            tx : '0x' + this.tx.toString(16),
+            txbf : '0x' + this.txbf.toString(16),
+            e : '0x' + this.e.toString(16),
+            lx : this.lx.toObject(),
+            rx : this.rx.toObject(),
+            G : this.G.encode('hex'),
+            n : '0x' + this.n.toString(16)
+    });
     }
 
     verify() {

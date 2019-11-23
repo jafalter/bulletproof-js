@@ -51,6 +51,21 @@ class BigIntVector extends Vector {
     }
 
     /**
+     * Construct BigInt Vector from array
+     * of hex strings
+     *
+     * @param a {{n : string, elems : []}}
+     */
+    static getFromObject(a) {
+        const n = a.n ? BigInt(a.n) : false;
+        const v = new Vector(n);
+        for( let e of a.elems ) {
+            v.addElem(BigInt(e));
+        }
+        return v;
+    }
+
+    /**
      * Optional parameter
      * If passed, all operations will
      * be calculated in the group n
@@ -71,11 +86,47 @@ class BigIntVector extends Vector {
      * @return {BigIntVector}
      */
     clone() {
-        const v = new BigIntVector();
+        const v = new BigIntVector(this.n);
         for( let i = 0; i < this.length(); i++ ) {
             v.addElem(this.get(i));
         }
         return v;
+    }
+
+    /**
+     * Return an array of hex encoded values
+     *
+     * @return {[]}
+     */
+    toObject() {
+        const hex = [];
+        for(let e of this.elems) {
+            hex.push('0x' + e.toString(16));
+        }
+        return {
+            n : this.n ? '0x' + this.n.toString(16) : null,
+            elems : hex
+        };
+    }
+
+    /**
+     *
+     * @param v2 {BigIntVector}
+     * @return {boolean}
+     */
+    equals(v2) {
+        if( !(v2 instanceof BigIntVector) ) {
+            return false;
+        }
+        if( v2.length() !== this.length() ) {
+            return false;
+        }
+        for( let i = 0; i < this.length(); i++ ) {
+            if( this.get(i) !== v2.get(i) ) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -200,7 +251,7 @@ class BigIntVector extends Vector {
      * @return {BigIntVector} result vector
      */
     multWithScalar(sc) {
-        const v = new BigIntVector();
+        const v = new BigIntVector(this.n);
         if( typeof sc !== 'bigint') {
             throw new Error("Scalar sc has to be of type bigint");
         }
@@ -236,7 +287,7 @@ class BigIntVector extends Vector {
         if( typeof sc !== 'bigint' ) {
             throw new Error("Scalar must be bigint");
         }
-        const v = new BigIntVector();
+        const v = new BigIntVector(this.n);
         for( let i = 0; i < this.length(); i++ ) {
             const val = this.get(i);
             if( typeof val !== 'bigint' ) {
@@ -259,7 +310,7 @@ class BigIntVector extends Vector {
      * @param sc {BigInt}
      */
     addScalar(sc) {
-        const v = new BigIntVector();
+        const v = new BigIntVector(this.n);
         if( typeof sc !== 'bigint' ) {
             throw new Error("Scalar must be bigint");
         }
@@ -281,7 +332,7 @@ class BigIntVector extends Vector {
      * @return {BigIntVector}
      */
     addVector(vec) {
-        const v = new BigIntVector();
+        const v = new BigIntVector(this.n);
         if( !(vec instanceof BigIntVector) ) {
             throw new Error("Need to pass another Vector");
         }

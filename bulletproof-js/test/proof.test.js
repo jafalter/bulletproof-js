@@ -2,6 +2,7 @@ const EC = require('elliptic').ec;
 const assert = require('assert');
 
 const Factory = require('../src/ProofFactory');
+const UncompressedBulletproof = require('../src/UncompressedBulletproof');
 const Utils = require('../src/Utils');
 const Maths = require('../src/Maths');
 const Vector = require('../src/BigIntVector');
@@ -91,7 +92,7 @@ describe('Tests for the rangeproof', () => {
         assert(T1.mul(xBN).eq(T1cmp));
     });
 
-    it('Should create a range proof', () => {
+    it('Should create an uncompressed Bulletproof which should verify', () => {
         const x = 1897278917812981289198n;
         const val = 25n;
         const low = 0n;
@@ -103,5 +104,21 @@ describe('Tests for the rangeproof', () => {
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
         assert(prf.verify());
+    }).timeout(5000);
+
+    it('Should create an uncompressed Bulletproof serialize and deserialize correctly', () => {
+        const x = 1897278917812981289198n;
+        const val = 25n;
+        const low = 0n;
+        const upper = 2n ** 64n;
+
+        const G = ec.g;
+        const H = Utils.getHFromHashingG(G);
+        const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
+
+        const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
+        const ser = prf.toJson();
+        const des = UncompressedBulletproof.fromJsonString(ser);
+        des.equals(ser);
     }).timeout(5000);
 });

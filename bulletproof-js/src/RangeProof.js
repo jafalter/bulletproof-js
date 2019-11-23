@@ -9,6 +9,18 @@ class RangeProof {
     verify() {
         return false;
     }
+
+    toJson() {
+        return null;
+    }
+
+    toBytes() {
+        return null;
+    }
+
+    equals(e) {
+        return false;
+    }
 }
 
 module.exports = RangeProof;
