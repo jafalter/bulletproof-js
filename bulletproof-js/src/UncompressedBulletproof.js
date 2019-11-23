@@ -1,10 +1,13 @@
 var EC = require('elliptic').ec;
+const assert = require('assert');
 
 const RangeProof = require('./RangeProof');
 const Utils = require('./Utils');
 const BigIntVector = require('./BigIntVector');
 const Maths = require('./Maths');
 const PointVector = require('./PointVector');
+const CompressedBulletproof = require('./CompressedBulletproof');
+const ProofUtils = require('./ProofUtils');
 
 var ec = new EC('secp256k1');
 
@@ -13,19 +16,6 @@ var ec = new EC('secp256k1');
  * a more compact InnerProductBulletproof
  */
 class UncompressedBulletproof extends RangeProof {
-
-    static delta(yn, z, mod=false) {
-        if( mod && typeof mod !== 'bigint' ) {
-            throw new Error("Please supply bigint as mod parameter");
-        }
-        const ones = BigIntVector.getVectorWithOnlyScalar(1n, yn.length(), mod);
-        const twopown = BigIntVector.getVectorToPowerE(2n, BigInt(yn.length(), mod));
-        const left = (z - z ** 2n) * ones.multVectorToScalar(yn);
-        const right = z ** 3n * ones.multVectorToScalar(twopown);
-        const result = left - right;
-        if( mod ) { return Maths.mod(result, mod); }
-        return result;
-    }
 
     /**
      * Get UncompressedBulletproof from serialzed
@@ -48,7 +38,7 @@ class UncompressedBulletproof extends RangeProof {
             BigIntVector.getFromObject(obj.lx),
             BigIntVector.getFromObject(obj.rx),
             ec.keyFromPublic(obj.G, 'hex').pub,
-            BigInt(obj.n),
+            BigInt(obj.order),
         )
     }
 
@@ -65,9 +55,9 @@ class UncompressedBulletproof extends RangeProof {
      * @param lx {BigIntVector} left side of the blinded vector product
      * @param rx {BigIntVector} right side of the blinded vector prduct
      * @param G {Point} Base generator
-     * @param n {BigInt} curve order
+     * @param order {BigInt} curve order
      */
-    constructor(V, A, S, T1, T2, tx, txbf, e, lx, rx, G, n) {
+    constructor(V, A, S, T1, T2, tx, txbf, e, lx, rx, G, order) {
         super();
         this.V = V;
         this.A = A;
@@ -80,12 +70,12 @@ class UncompressedBulletproof extends RangeProof {
         this.lx = lx;
         this.rx = rx;
         this.G = G;
-        this.n = n;
+        this.order = order;
 
         // Calculate the challenges y, z, x by using Fiat Shimar
-        this.y = Utils.getFiatShamirChallenge(this.V, this.n);
-        this.z = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.y.toString(16)), this.n);
-        this.x = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.z.toString(16)), this.n);
+        this.y = Utils.getFiatShamirChallenge(this.V, this.order);
+        this.z = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.y.toString(16)), this.order);
+        this.x = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.z.toString(16)), this.order);
     }
 
     /**
@@ -108,7 +98,7 @@ class UncompressedBulletproof extends RangeProof {
                this.lx.equals(e.lx) &&
                this.rx.equals(e.rx) &&
                this.G.eq(e.G) &&
-               this.n === e.n;
+               this.order === e.order;
     }
 
     /**
@@ -129,11 +119,11 @@ class UncompressedBulletproof extends RangeProof {
             lx : this.lx.toObject(),
             rx : this.rx.toObject(),
             G : this.G.encode('hex'),
-            n : '0x' + this.n.toString(16)
+            order : '0x' + this.order.toString(16)
     });
     }
 
-    verify() {
+    verify(low, up) {
         // Generator H
         const H = Utils.getHFromHashingG(this.G);
 
@@ -149,27 +139,27 @@ class UncompressedBulletproof extends RangeProof {
         `);
 
         // Verify that <lx, rx> = tx
-        const vTx = Maths.mod(this.lx.multVectorToScalar(this.rx, this.n), this.n);
+        const vTx = Maths.mod(this.lx.multVectorToScalar(this.rx, this.order), this.order);
         if( vTx !== this.tx ) { return false; }
 
         // Now we verify that t() is the right polynomial
-        const zsq = Maths.mod(z ** 2n, this.n);
-        const y_e = BigIntVector.getVectorToPowerE( y, BigInt(this.lx.length()), this.n );
-        const xsq = Maths.mod(x ** 2n, this.n);
+        const zsq = Maths.mod(z ** 2n, this.order);
+        const y_e = BigIntVector.getVectorToPowerE( y, up, this.order );
+        const xsq = Maths.mod(x ** 2n, this.order);
 
-        const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.n, H);
-        const rightEq = this.V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(UncompressedBulletproof.delta(y_e, z, this.n)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
+        const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, H);
+        const rightEq = this.V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_e, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
         if( leftEq.eq(rightEq) === false ) { return false; }
 
         // Now prove validity of lx and rx
-        const y_nege = BigIntVector.getVectorToPowerE( -y, BigInt(this.lx.length()), this.n);
+        const y_nege = BigIntVector.getVectorToPowerE( -y, up, this.order);
         const H2 = y_nege.multVectorWithPointToPoint(H);
 
-        const nege = Maths.mod(-this.e, this.n);
+        const nege = Maths.mod(-this.e, this.order);
         const Bnege = Utils.toBN(nege);
         const Bx = Utils.toBN(x);
-        const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_e.length(), this.n);
-        const twos_power_e  = BigIntVector.getVectorToPowerE(2n, BigInt(y_e.length()), this.n);
+        const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_e.length(), this.order);
+        const twos_power_e  = BigIntVector.getVectorToPowerE(2n, BigInt(y_e.length()), this.order);
         const twos_times_zsq = twos_power_e.multWithScalar(zsq);
 
         const l1 = y_e.multWithScalar(z).addVector(twos_times_zsq);
@@ -183,7 +173,9 @@ class UncompressedBulletproof extends RangeProof {
 
     /**
      * Use the inner product compression to
-     * compress size of the vectors to log n
+     * compress size of the vectors to log order
+     *
+     * @return {CompressedBulletproof}
      */
     compressProof() {
         const H = Utils.getHFromHashingG(this.G);
@@ -191,10 +183,10 @@ class UncompressedBulletproof extends RangeProof {
         // Orthogonal generator B
         const B = Utils.getHFromHashingG(H);
         // Indeterminate variable w
-        const w = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.x.toString(16)), this.n);
+        const w = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.x.toString(16)), this.order);
 
         const P = this.lx.multVectorWithPointToPoint(this.G).add(this.rx.multVectorWithPointToPoint(H));
-        const c = this.lx.multVectorToScalar(this.rx, this.n);
+        const c = this.lx.multVectorToScalar(this.rx, this.order);
         const Q = B.mul(w);
         const P_star = P.add(B.mul(w * c));
         const k = Math.ceil(Math.log(this.lx.length()));
@@ -207,19 +199,19 @@ class UncompressedBulletproof extends RangeProof {
         let b_tmp = this.rx.clone();
         let Gs_tmp = PointVector.getVectorFullOfPoint(this.G, len);
         let Hs_tmp = PointVector.getVectorFullOfPoint(H, len);
-        let u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(w.toString(16)), this.n);
+        let u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(w.toString(16)), this.order);
 
         const intermediateTerms = [];
 
         while (a_tmp.length() > 1) {
-            const u_k_neg = Maths.mod(u_k ** -1, this.n);
-            const a_lo = new BigIntVector(this.n);
-            const b_lo = new BigIntVector(this.n);
+            const u_k_neg = Maths.mod(u_k ^ -1n, this.order);
+            const a_lo = new BigIntVector(this.order);
+            const b_lo = new BigIntVector(this.order);
             const G_lo = new PointVector();
             const H_lo = new PointVector();
 
-            const a_hi = new BigIntVector(this.n);
-            const b_hi = new BigIntVector(this.n);
+            const a_hi = new BigIntVector(this.order);
+            const b_hi = new BigIntVector(this.order);
             const G_hi = new PointVector();
             const H_hi = new PointVector();
 
@@ -244,8 +236,8 @@ class UncompressedBulletproof extends RangeProof {
             assert(H_lo.length() === H_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
 
             // Now we add up the vectors seperated by u_k
-            a_tmp = new BigIntVector(this.n);
-            b_tmp = new BigIntVector(this.n);
+            a_tmp = new BigIntVector(this.order);
+            b_tmp = new BigIntVector(this.order);
             Gs_tmp = new PointVector();
             Hs_tmp = new PointVector();
             for ( let i = 0; i < a_lo.length(); i++ ) {
@@ -255,15 +247,33 @@ class UncompressedBulletproof extends RangeProof {
                 Hs_tmp.addElem(H_lo.get(i).mul(Utils.toBN(u_k)).add(H_hi.get(i).mul(Utils.toBN(u_k_neg))));
             }
 
-            const Lk = G_hi.multWithBigIntVectorToPoint(a_lo).add(H_lo.multWithBigIntVectorToPoint(b_hi)).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi, this.n))));
-            const Rk = G_lo.multWithBigIntVectorToPoint(a_hi).add(H_hi.multWithBigIntVectorToPoint(b_lo)).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo, this.n))));
+            const Lk = G_hi.multWithBigIntVectorToPoint(a_lo).add(H_lo.multWithBigIntVectorToPoint(b_hi)).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi, this.order))));
+            const Rk = G_lo.multWithBigIntVectorToPoint(a_hi).add(H_hi.multWithBigIntVectorToPoint(b_lo)).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo, this.order))));
             intermediateTerms.push({
                 L : Lk,
                 R : Rk,
             });
 
-            u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(u_k.toString(16)), this.n);
+            u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(u_k.toString(16)), this.order);
         }
+        return new CompressedBulletproof(
+            this.V,
+            this.A,
+            this.S,
+            this.T1,
+            this.T2,
+            this.tx,
+            this.txbf,
+            this.e,
+            a_tmp.get(0),
+            b_tmp.get(0),
+            Gs_tmp.get(0),
+            Hs_tmp.get(0),
+            intermediateTerms,
+            B.mul(Utils.toBN(w)),
+            this.G,
+            this.order
+        );
     }
 }
 

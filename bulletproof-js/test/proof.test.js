@@ -1,5 +1,7 @@
 const EC = require('elliptic').ec;
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 
 const Factory = require('../src/ProofFactory');
 const UncompressedBulletproof = require('../src/UncompressedBulletproof');
@@ -103,7 +105,7 @@ describe('Tests for the rangeproof', () => {
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
-        assert(prf.verify());
+        assert(prf.verify(0n, 64n));
     }).timeout(5000);
 
     it('Should create an uncompressed Bulletproof serialize and deserialize correctly', () => {
@@ -120,5 +122,12 @@ describe('Tests for the rangeproof', () => {
         const ser = prf.toJson();
         const des = UncompressedBulletproof.fromJsonString(ser);
         des.equals(ser);
+    }).timeout(5000);
+
+    it('Should compress the UncompressedBulletproof into a compressed one', () => {
+        const serProof = fs.readFileSync(path.join(__dirname, 'fixtures') + '/uncompressed_proof.json', 'utf-8');
+        const prf = UncompressedBulletproof.fromJsonString(serProof);
+        const compr = prf.compressProof();
+        assert(compr.verify(0n, 64n));
     }).timeout(5000);
 });

@@ -25,17 +25,17 @@ class BigIntVector extends Vector {
     }
 
     /**
-     * Generate a Vector with y^n
+     * Generate a Vector with y^order
      * while y^e = (1,y,y^2,...,y^e-1)
      *
      * @param y {BigInt} initial number
      * @param e {BigInt} the last exponent
-     * @param n {BigInt} optional number if calculations should be mod n
+     * @param n {BigInt} optional number if calculations should be mod order
      * @return {BigIntVector}
      */
     static getVectorToPowerE(y, e, n = false) {
         if( typeof y !== 'bigint' || typeof e !== 'bigint' ) {
-            throw new Error("Please provide y and n as bigints");
+            throw new Error("Please provide y and order as bigints");
         }
 
         const vec = new BigIntVector(n);
@@ -54,11 +54,11 @@ class BigIntVector extends Vector {
      * Construct BigInt Vector from array
      * of hex strings
      *
-     * @param a {{n : string, elems : []}}
+     * @param a {{order : string, elems : []}}
      */
     static getFromObject(a) {
         const n = a.n ? BigInt(a.n) : false;
-        const v = new Vector(n);
+        const v = new BigIntVector(n);
         for( let e of a.elems ) {
             v.addElem(BigInt(e));
         }
@@ -68,7 +68,7 @@ class BigIntVector extends Vector {
     /**
      * Optional parameter
      * If passed, all operations will
-     * be calculated in the group n
+     * be calculated in the group order
      *
      * @param n {BigInt} Optional group order
      */

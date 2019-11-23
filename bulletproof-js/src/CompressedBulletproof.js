@@ -1,4 +1,8 @@
 const RangeProof = require('./RangeProof');
+const Utils = require('./Utils');
+const Maths = require('./Maths');
+const BigIntVector = require('./BigIntVector');
+const ProofUtils = require('./ProofUtils');
 
 class CompressedBulletproof extends RangeProof {
 
@@ -19,9 +23,9 @@ class CompressedBulletproof extends RangeProof {
      * @param ind {{ L : Point, R : Point}[]} indeterminante variables
      * @param wB {Point} orthogonal Generator multiplied with indeterminate variable w
      * @param G {Point} Generator
-     * @param n {BigInt} curve order
+     * @param order {BigInt} curve order
      */
-    constructor(V, A, S, T1, T2, tx, txbf, e, a0, b0, G0, H0, ind, wB, G, n) {
+    constructor(V, A, S, T1, T2, tx, txbf, e, a0, b0, G0, H0, ind, wB, G, order) {
         super();
         this.V = V;
         this.A = A;
@@ -38,10 +42,15 @@ class CompressedBulletproof extends RangeProof {
         this.ind = ind;
         this.wB = wB;
         this.G = G;
-        this.n = n;
+        this.order = order;
+
+        // Calculate the challenges y, z, x by using Fiat Shimar
+        this.y = Utils.getFiatShamirChallenge(this.V, this.order);
+        this.z = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.y.toString(16)), this.order);
+        this.x = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.z.toString(16)), this.order);
     }
 
-    verify() {
+    verify(low, up) {
         // Generator H
         const H = Utils.getHFromHashingG(this.G);
 
@@ -57,23 +66,23 @@ class CompressedBulletproof extends RangeProof {
         `);
 
         // Now we verify that t() is the right polynomial
-        const zsq = Maths.mod(z ** 2n, this.n);
-        const y_e = BigIntVector.getVectorToPowerE( y, BigInt(this.lx.length()), this.n );
-        const xsq = Maths.mod(x ** 2n, this.n);
+        const zsq = Maths.mod(z ** 2n, this.order);
+        const y_e = BigIntVector.getVectorToPowerE( y, up, this.order );
+        const xsq = Maths.mod(x ** 2n, this.order);
 
-        const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.n, H);
-        const rightEq = this.V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(UncompressedBulletproof.delta(y_e, z, this.n)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
+        const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, H);
+        const rightEq = this.V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_e, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
         if( leftEq.eq(rightEq) === false ) { return false; }
 
         // Now prove validity of lx and rx
-        const y_nege = BigIntVector.getVectorToPowerE( -y, BigInt(this.lx.length()), this.n);
+        const y_nege = BigIntVector.getVectorToPowerE( -y, up, this.order);
         const H2 = y_nege.multVectorWithPointToPoint(H);
 
-        const nege = Maths.mod(-this.e, this.n);
+        const nege = Maths.mod(-this.e, this.order);
         const Bnege = Utils.toBN(nege);
         const Bx = Utils.toBN(x);
-        const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_e.length(), this.n);
-        const twos_power_e  = BigIntVector.getVectorToPowerE(2n, BigInt(y_e.length()), this.n);
+        const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_e.length(), this.order);
+        const twos_power_e  = BigIntVector.getVectorToPowerE(2n, BigInt(y_e.length()), this.order);
         const twos_times_zsq = twos_power_e.multWithScalar(zsq);
 
         const l1 = y_e.multWithScalar(z).addVector(twos_times_zsq);
@@ -93,7 +102,7 @@ class CompressedBulletproof extends RangeProof {
         for( let j = 1; j < this.ind.length; j++ ) {
             det.add(this.ind[j].L.add(this.ind[j].R));
         }
-        const rightSide = this.G0.mul(Utils.toBN(this.a0)).add(this.H0.mul(Utils.toBN(this.b0))).add(this.wB.mul(Utils.toBN(Maths.mod(this.a0 * this.b0, this.n)))).add(det.neg());
+        const rightSide = this.G0.mul(Utils.toBN(this.a0)).add(this.H0.mul(Utils.toBN(this.b0))).add(this.wB.mul(Utils.toBN(Maths.mod(this.a0 * this.b0, this.order)))).add(det.neg());
         return leftSide.eq(rightSide);
     }
 }

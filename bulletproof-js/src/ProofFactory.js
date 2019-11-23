@@ -4,6 +4,7 @@ const Utils = require('./Utils');
 const BigIntVector = require('./BigIntVector');
 const Maths = require('./Maths');
 const UncompressedBulletproof = require('./UncompressedBulletproof');
+const ProofUtils = require('./ProofUtils');
 
 class ProofFactory {
 
@@ -20,7 +21,7 @@ class ProofFactory {
      * @param H {Point} generator H used in pedersen
      * @param lowBound {BigInt} the lower bound of the rangeproof. Please use BigInt not number
      * @param upBound {BigInt} the upper bound of the rangeproof. Please use BigInt not number
-     * @param n {BigInt} Order of the group. All calculations will be mod n
+     * @param n {BigInt} Order of the group. All calculations will be mod order
      * @param doAssert {boolean} if we should do asserts. Should be set to false in production for performance gains
      * @param randomNum {boolean|function} optional random bigint generating function
      * @return {RangeProof} Final rangeproof which can be verified
@@ -55,7 +56,7 @@ class ProofFactory {
         // Vector 2 contains powers of 2 up to our upper bound
         const vec2 = new BigIntVector(n);
         let pow = 0n;
-        while ((2n ** pow) <= upBound) {
+        while ((2n ** pow) < upBound) {
             vec2.addElem(2n ** pow);
             pow++;
         }
@@ -79,7 +80,7 @@ class ProofFactory {
 
         /*
         * Now we want to prove three statements
-        * < a_L, 2^n > = v (the binary vector representation times a vector containing powers of 2 will result in the original number)
+        * < a_L, 2^order > = v (the binary vector representation times a vector containing powers of 2 will result in the original number)
         * a_L * a_R = 0
         * (a_L -1) - a_R = 0 (Those two statements prove that a_L contains only 1 and 0)
         *
@@ -110,7 +111,7 @@ class ProofFactory {
         const r0 = y_e.multVector(a_R_plusz).addVector(twos_times_zsq);
 
         if( doAssert ) {
-            const lefthandside = Maths.mod(zsq * v + UncompressedBulletproof.delta(y_e, z), n);
+            const lefthandside = Maths.mod(zsq * v + ProofUtils.delta(y_e, z), n);
             const righthandside = Maths.mod(l0.multVectorToScalar(r0), n);
 
             // Now we got a single vector product proving our 3 statements which can be easily verified
@@ -196,7 +197,7 @@ class ProofFactory {
         // Send openings tx and tx_bf back to the verifier
 
         if( doAssert ) {
-            const d = UncompressedBulletproof.delta(y_e, z, n);
+            const d = ProofUtils.delta(y_e, z, n);
             const Bdelta = Utils.toBN(d);
             const Bzsq = Utils.toBN(zsq);
             const Bx = Utils.toBN(x);
@@ -213,7 +214,7 @@ class ProofFactory {
 
             // The complete equality
             const leftEq = Utils.getPedersenCommitment(tx, tx_bf, n, H);
-            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.mod(UncompressedBulletproof.delta(y_e, z), n)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
+            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.mod(ProofUtils.delta(y_e, z), n)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
 
             assert(leftEq.eq(rightEq), "Final equality the verifier checks to verify t(x) is correct polynomial");
         }
@@ -237,7 +238,7 @@ class ProofFactory {
 
         Theoretically we could simply transmit l(x) and r(x) to the verifier, since they are blinded
         however this would need 2n scalars to be transmitted.
-        Using the inner product prove we only need to transmit log(n) communication cost
+        Using the inner product prove we only need to transmit log(order) communication cost
          */
         if( doAssert ) {
             // transmutating the generator H such that we can verify r(x)
