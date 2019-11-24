@@ -129,7 +129,7 @@ class Utils {
      * @param G {Point}
      * @return {Point}
      */
-    static getHFromHashingG(G) {
+    static getnewGenFromHashingGen(G) {
         const hashedG = Utils.sha256pointtohex(G);
         return  Utils.scalarToPoint(hashedG);
     }
@@ -156,7 +156,7 @@ class Utils {
     static getPedersenCommitment(v, x, n=false, H=false) {
         const G = ec.g;
         if( !H ) {
-            H = Utils.getHFromHashingG(G);
+            H = Utils.getnewGenFromHashingGen(G);
         }
         const x_BN = Utils.toBN(n ? Maths.mod(x, n) : x);
         const v_BN = Utils.toBN(n ? Maths.mod(v, n) : x);
@@ -176,7 +176,7 @@ class Utils {
     static getVectorPedersenCommitment(l, r, x, n=false, H=false) {
         const G = ec.g;
         if( !H ) {
-            H = Utils.getHFromHashingG(G);
+            H = Utils.getnewGenFromHashingGen(G);
         }
         const P1 = l.multVectorWithPointToPoint(G);
         const P2 = r.multVectorWithPointToPoint(H);

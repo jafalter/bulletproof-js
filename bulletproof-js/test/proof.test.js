@@ -18,8 +18,8 @@ describe('Tests for the rangeproof', () => {
         const y = 897109873401987290187239812793n;
         const n = secp256k1.n;
         const e = 64n;
-        const y_n = Vector.getVectorToPowerE(y, e, n);
-        const y_negn = Vector.getVectorToPowerE(-y, e, n);
+        const y_n = Vector.getVectorToPowerN(y, e, n);
+        const y_negn = Vector.getVectorToPowerN(-y, e, n);
         const P = ec.g.mul(Utils.toBN(98712398123n));
         const Pt1 = y_n.multVectorWithPointToPoint(P);
         const Pt2 = y_negn.multVectorWithPointToPoint(Pt1);
@@ -101,7 +101,7 @@ describe('Tests for the rangeproof', () => {
         const upper = 2n ** 64n;
 
         const G = ec.g;
-        const H = Utils.getHFromHashingG(G);
+        const H = Utils.getnewGenFromHashingGen(G);
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
@@ -115,7 +115,7 @@ describe('Tests for the rangeproof', () => {
         const upper = 2n ** 64n;
 
         const G = ec.g;
-        const H = Utils.getHFromHashingG(G);
+        const H = Utils.getnewGenFromHashingGen(G);
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
@@ -124,10 +124,10 @@ describe('Tests for the rangeproof', () => {
         des.equals(ser);
     }).timeout(5000);
 
-    it('Should compress the UncompressedBulletproof into a compressed one', () => {
+    it('Should compress the UncompressedBulletproof into a compressed one, which should verify', () => {
         const serProof = fs.readFileSync(path.join(__dirname, 'fixtures') + '/uncompressed_proof.json', 'utf-8');
         const prf = UncompressedBulletproof.fromJsonString(serProof);
-        const compr = prf.compressProof();
+        const compr = prf.compressProof(true);
         assert(compr.verify(0n, 64n));
     }).timeout(5000);
 });

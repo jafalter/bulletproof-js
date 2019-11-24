@@ -21,11 +21,11 @@ class CompressedBulletproof extends RangeProof {
      * @param G0 {Point} the single element in G after compressing the Gs vector
      * @param H0 {Point} the single element in H after compressing the Hs vector
      * @param ind {{ L : Point, R : Point}[]} indeterminante variables
-     * @param wB {Point} orthogonal Generator multiplied with indeterminate variable w
+     * @param Q {Point} orthogonal Generator multiplied with indeterminate variable w
      * @param G {Point} Generator
      * @param order {BigInt} curve order
      */
-    constructor(V, A, S, T1, T2, tx, txbf, e, a0, b0, G0, H0, ind, wB, G, order) {
+    constructor(V, A, S, T1, T2, tx, txbf, e, a0, b0, G0, H0, ind, Q, G, order) {
         super();
         this.V = V;
         this.A = A;
@@ -40,7 +40,7 @@ class CompressedBulletproof extends RangeProof {
         this.G0 = G0;
         this.H0 = H0;
         this.ind = ind;
-        this.wB = wB;
+        this.Q = Q;
         this.G = G;
         this.order = order;
 
@@ -52,7 +52,7 @@ class CompressedBulletproof extends RangeProof {
 
     verify(low, up) {
         // Generator H
-        const H = Utils.getHFromHashingG(this.G);
+        const H = Utils.getnewGenFromHashingGen(this.G);
 
         // First we calculate the challenges y, z, x by using Fiat Shamir
         const y = this.y;
@@ -67,7 +67,7 @@ class CompressedBulletproof extends RangeProof {
 
         // Now we verify that t() is the right polynomial
         const zsq = Maths.mod(z ** 2n, this.order);
-        const y_e = BigIntVector.getVectorToPowerE( y, up, this.order );
+        const y_e = BigIntVector.getVectorToPowerN( y, up, this.order );
         const xsq = Maths.mod(x ** 2n, this.order);
 
         const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, H);
@@ -75,14 +75,14 @@ class CompressedBulletproof extends RangeProof {
         if( leftEq.eq(rightEq) === false ) { return false; }
 
         // Now prove validity of lx and rx
-        const y_nege = BigIntVector.getVectorToPowerE( -y, up, this.order);
+        const y_nege = BigIntVector.getVectorToPowerN( -y, up, this.order);
         const H2 = y_nege.multVectorWithPointToPoint(H);
 
         const nege = Maths.mod(-this.e, this.order);
         const Bnege = Utils.toBN(nege);
         const Bx = Utils.toBN(x);
         const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_e.length(), this.order);
-        const twos_power_e  = BigIntVector.getVectorToPowerE(2n, BigInt(y_e.length()), this.order);
+        const twos_power_e  = BigIntVector.getVectorToPowerN(2n, BigInt(y_e.length()), this.order);
         const twos_times_zsq = twos_power_e.multWithScalar(zsq);
 
         const l1 = y_e.multWithScalar(z).addVector(twos_times_zsq);
@@ -97,12 +97,12 @@ class CompressedBulletproof extends RangeProof {
         const P = P1;
         const c = this.tx;
 
-        const leftSide = P.add(this.wB.mul(Utils.toBN(c)));
+        const leftSide = P.add(this.Q.mul(Utils.toBN(c)));
         const det = this.ind[0].L.add(this.ind[0].R);
         for( let j = 1; j < this.ind.length; j++ ) {
             det.add(this.ind[j].L.add(this.ind[j].R));
         }
-        const rightSide = this.G0.mul(Utils.toBN(this.a0)).add(this.H0.mul(Utils.toBN(this.b0))).add(this.wB.mul(Utils.toBN(Maths.mod(this.a0 * this.b0, this.order)))).add(det.neg());
+        const rightSide = this.G0.mul(Utils.toBN(this.a0)).add(this.H0.mul(Utils.toBN(this.b0))).add(this.Q.mul(Utils.toBN(Maths.mod(this.a0 * this.b0, this.order)))).add(det.neg());
         return leftSide.eq(rightSide);
     }
 }

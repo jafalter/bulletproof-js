@@ -33,7 +33,7 @@ class BigIntVector extends Vector {
      * @param n {BigInt} optional number if calculations should be mod order
      * @return {BigIntVector}
      */
-    static getVectorToPowerE(y, e, n = false) {
+    static getVectorToPowerN(y, e, n = false) {
         if( typeof y !== 'bigint' || typeof e !== 'bigint' ) {
             throw new Error("Please provide y and order as bigints");
         }

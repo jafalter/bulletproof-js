@@ -18,7 +18,7 @@ class ProofUtils {
             throw new Error("Please supply bigint as mod parameter");
         }
         const ones = BigIntVector.getVectorWithOnlyScalar(1n, yn.length(), mod);
-        const twopown = BigIntVector.getVectorToPowerE(2n, BigInt(yn.length(), mod));
+        const twopown = BigIntVector.getVectorToPowerN(2n, BigInt(yn.length(), mod));
         const left = (z - z ** 2n) * ones.multVectorToScalar(yn);
         const right = z ** 3n * ones.multVectorToScalar(twopown);
         const result = left - right;
