@@ -203,6 +203,7 @@ class UncompressedBulletproof extends RangeProof {
         let u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(w.toString(16)), this.order);
 
         const intermediateTerms = [];
+        let first = true;
 
         while (a_tmp.length() > 1) {
             const u_k_neg = u_k ^ -1n;
@@ -256,7 +257,19 @@ class UncompressedBulletproof extends RangeProof {
                 u : u_k
             });
 
+            if( doAssert && first ) {
+                const P_star = P.add(Q.mul(Utils.toBN(c)));
+                const Pk = Gs_tmp.multWithBigIntVectorToPoint(a_tmp).add(Hs_tmp.multWithBigIntVectorToPoint(b_tmp)).add(Q.mul(a_tmp.multVectorToScalar(b_tmp)));
+                const Lj = intermediateTerms[0].L;
+                const Rj = intermediateTerms[0].R;
+                const uj = intermediateTerms[0].u;
+                const uj_2 = uj ^ 2n;
+                const uj_2neg = uj ^ (-2n);
+                const det = Lj.mul(uj_2).add(Rj.mul(uj_2neg));
+                assert(P_star.eq(Pk.add(det.neg())))
+            }
             // TODO u_k ranomly sampled?
+            first = false;
             u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(u_k.toString(16)), this.order);
         }
         const G0 = Gs_tmp.get(0);
