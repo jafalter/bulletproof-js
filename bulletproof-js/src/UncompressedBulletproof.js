@@ -259,13 +259,13 @@ class UncompressedBulletproof extends RangeProof {
 
             if( doAssert && first ) {
                 const P_star = P.add(Q.mul(Utils.toBN(c)));
-                const Pk = Gs_tmp.multWithBigIntVectorToPoint(a_tmp).add(Hs_tmp.multWithBigIntVectorToPoint(b_tmp)).add(Q.mul(a_tmp.multVectorToScalar(b_tmp)));
+                const Pk = Gs_tmp.multWithBigIntVectorToPoint(a_tmp).add(Hs_tmp.multWithBigIntVectorToPoint(b_tmp)).add(Q.mul(Utils.toBN(Maths.mod(a_tmp.multVectorToScalar(b_tmp), this.order))));
                 const Lj = intermediateTerms[0].L;
                 const Rj = intermediateTerms[0].R;
                 const uj = intermediateTerms[0].u;
-                const uj_2 = uj ^ 2n;
-                const uj_2neg = uj ^ (-2n);
-                const det = Lj.mul(uj_2).add(Rj.mul(uj_2neg));
+                const uj_2 = Maths.mod(uj ^ 2n, this.order);
+                const uj_2neg = Maths.mod(uj ^ (-2n), this.order);
+                const det = Lj.mul(Utils.toBN(uj_2)).add(Rj.mul(Utils.toBN(uj_2neg)));
                 assert(P_star.eq(Pk.add(det.neg())))
             }
             // TODO u_k ranomly sampled?
@@ -288,11 +288,11 @@ class UncompressedBulletproof extends RangeProof {
                 const Lj = intermediateTerms[j].L;
                 const Rj = intermediateTerms[j].R;
                 const uj = intermediateTerms[j].u;
-                const uj_2 = uj ^ 2n;
-                const uj_2neg = uj ^(-2n);
+                const uj_2 = Maths.mod(uj ^ 2n, this.order);
+                const uj_2neg = Maths.mod(uj ^(-2n), this.order);
                 det.add(Lj.mul(uj_2).add(Rj.mul(uj_2neg)));
             }
-            const P_cmp = G0.mul(Utils.toBN(a0)).add(H0.mul(Utils.toBN(b0))).add(Q.mul(Utils.toBN(Maths.mod(a0 * b0, this.order)))).add(det.neg());
+            const P_cmp = this.G.mul(Utils.toBN(a0)).add(H.mul(Utils.toBN(b0))).add(Q.mul(Utils.toBN(Maths.mod(a0 * b0, this.order)))).add(det.neg());
             assert(P_star.eq(P_cmp), 'What the verifier will check');
         }
         return new CompressedBulletproof(

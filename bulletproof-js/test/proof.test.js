@@ -7,7 +7,8 @@ const Factory = require('../src/ProofFactory');
 const UncompressedBulletproof = require('../src/UncompressedBulletproof');
 const Utils = require('../src/Utils');
 const Maths = require('../src/Maths');
-const Vector = require('../src/BigIntVector');
+const BigIntVector = require('../src/BigIntVector');
+const PointVector = require('../src/PointVector');
 const secp256k1 = require('../src/Constants').secp256k1;
 
 const ec = new EC('secp256k1');
@@ -18,8 +19,8 @@ describe('Tests for the rangeproof', () => {
         const y = 897109873401987290187239812793n;
         const n = secp256k1.n;
         const e = 64n;
-        const y_n = Vector.getVectorToPowerN(y, e, n);
-        const y_negn = Vector.getVectorToPowerN(-y, e, n);
+        const y_n = BigIntVector.getVectorToPowerN(y, e, n);
+        const y_negn = BigIntVector.getVectorToPowerN(-y, e, n);
         const P = ec.g.mul(Utils.toBN(98712398123n));
         const Pt1 = y_n.multVectorWithPointToPoint(P);
         const Pt2 = y_negn.multVectorWithPointToPoint(Pt1);
@@ -130,4 +131,93 @@ describe('Tests for the rangeproof', () => {
         const compr = prf.compressProof(true);
         assert(compr.verify(0n, 64n));
     }).timeout(5000);
+
+    it('Should test the basis of the inner product compression', () => {
+        const order = secp256k1.n;
+
+        const G = ec.g;
+        const H = Utils.getnewGenFromHashingGen(G);
+        const B = Utils.getnewGenFromHashingGen(H);
+        const w = 33n;
+        const Q = B.mul(Utils.toBN(w));
+        const uk = 3n;
+        const ukneg = -3n;
+
+        const a = new BigIntVector();
+        const b = new BigIntVector();
+        a.addElem(50n);
+        a.addElem(12n);
+        a.addElem(34n);
+        a.addElem(13n);
+
+        b.addElem(10n);
+        b.addElem(80n);
+        b.addElem(3n);
+        b.addElem(5n);
+
+        const P = a.multVectorWithPointToPoint(G).add(b.multVectorWithPointToPoint(H));
+        const c = a.multVectorToScalar(b);
+        const P_star = P.add(Q.mul(Utils.toBN(c)));
+
+        const Gs = PointVector.getVectorFullOfPoint(G, 4);
+        const Hs = PointVector.getVectorFullOfPoint(H, 4);
+
+        // Do one round of compression
+        const a_lo = new BigIntVector();
+        const a_hi = new BigIntVector();
+        const b_lo = new BigIntVector();
+        const b_hi = new BigIntVector();
+        const G_lo = new PointVector();
+        const H_lo = new PointVector();
+        const G_hi = new PointVector();
+        const H_hi = new PointVector();
+
+        const half = a.length() / 2;
+        for( let i = 0; i < a.length(); i++ ) {
+            if( i < half ) {
+                a_lo.addElem(a.get(i));
+                b_lo.addElem(b.get(i));
+                G_lo.addElem(Gs.get(i));
+                H_lo.addElem(Hs.get(i));
+            }
+            else {
+                a_hi.addElem(a.get(i));
+                b_hi.addElem(b.get(i));
+                G_hi.addElem(Gs.get(i));
+                H_hi.addElem(Hs.get(i));
+            }
+        }
+
+        assert(a_lo.length() === 2);
+        assert(a_hi.length() === 2);
+        assert(b_lo.length() === 2);
+        assert(b_hi.length() === 2);
+        assert(G_lo.length() === 2);
+        assert(G_hi.length() === 2);
+        assert(H_lo.length() === 2);
+        assert(H_hi.length() === 2);
+
+        const a_sum = new BigIntVector();
+        const b_sum = new BigIntVector();
+        const G_sum = new PointVector();
+        const H_sum = new PointVector();
+
+        for(let i = 0; i < a_lo.length(); i++ ) {
+            a_sum.addElem(a_lo.get(i) * uk + ukneg * a_hi.get(i));
+            b_sum.addElem(b_lo.get(i) * ukneg + uk * b_hi.get(i));
+            G_sum.addElem(G_lo.get(i).mul(Utils.toBN(ukneg)).add(G_hi.get(i).mul(Utils.toBN(uk))));
+            H_sum.addElem(H_lo.get(i).mul(Utils.toBN(uk)).add(H_hi.get(i).mul(Utils.toBN(ukneg))));
+        }
+
+        const Lk = G_hi.multWithBigIntVectorToPoint(a_lo).add(H_lo.multWithBigIntVectorToPoint(b_hi)).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi, this.order))));
+        const Rk = G_lo.multWithBigIntVectorToPoint(a_hi).add(H_hi.multWithBigIntVectorToPoint(b_lo)).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo, this.order))));
+
+        const Pk = G_sum.multWithBigIntVectorToPoint(a_sum).add(H_sum.multWithBigIntVectorToPoint(b_sum)).add(Q.mul( Utils.toBN(Maths.mod(a_sum.multVectorToScalar(b_sum), order)) ));
+        const uk2 = 3n ^ 2n;
+        const ukn2 = - (3n ^ 2n);
+
+        const det = Lk.mul(Utils.toBN(uk2)).add(Rk.mul(Utils.toBN(ukn2)));
+
+        assert(P_star.eq(Pk.add(det.neg())));
+    });
 });
