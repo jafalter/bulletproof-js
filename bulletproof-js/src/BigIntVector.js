@@ -76,7 +76,7 @@ class BigIntVector extends Vector {
         super();
         this.elems = [];
         this.mod = n !== false;
-        this.n = n;
+        this.order = n;
     }
 
     /**
@@ -86,7 +86,7 @@ class BigIntVector extends Vector {
      * @return {BigIntVector}
      */
     clone() {
-        const v = new BigIntVector(this.n);
+        const v = new BigIntVector(this.order);
         for( let i = 0; i < this.length(); i++ ) {
             v.addElem(this.get(i));
         }
@@ -104,7 +104,7 @@ class BigIntVector extends Vector {
             hex.push('0x' + e.toString(16));
         }
         return {
-            n : this.n ? '0x' + this.n.toString(16) : null,
+            n : this.order ? '0x' + this.order.toString(16) : null,
             elems : hex
         };
     }
@@ -139,7 +139,7 @@ class BigIntVector extends Vector {
             throw new Error("Please only use BigInt values for the vector");
         }
         if( this.mod ) {
-            this.elems.push(Maths.mod(e, this.n))
+            this.elems.push(Maths.mod(e, this.order))
         }
         else {
             this.elems.push(e);
@@ -185,7 +185,7 @@ class BigIntVector extends Vector {
             throw new Error("Can only set bigint values in the vector");
         }
         if( this.mod ) {
-            this.elems[i] = Maths.mod(val, this.n);
+            this.elems[i] = Maths.mod(val, this.order);
         }
         else {
             this.elems[i] = val;
@@ -228,14 +228,14 @@ class BigIntVector extends Vector {
         if( this.length() !== v2.length() ) {
             throw new Error("Vectors to be multiplied must be same length");
         }
-        const v = new BigIntVector(this.n);
+        const v = new BigIntVector(this.order);
         for( let i = 0; i < this.length(); i++ ) {
             if( typeof this.get(i) !== 'bigint' || typeof v2.get(i) !== 'bigint' ) {
                 throw new Error("Vectors must only contain bigint values");
             }
             const result = this.get(i) * v2.get(i);
             if( this.mod ) {
-                v.addElem(Maths.mod(result, this.n));
+                v.addElem(Maths.mod(result, this.order));
             }
             else {
                 v.addElem(result);
@@ -251,13 +251,13 @@ class BigIntVector extends Vector {
      * @return {BigIntVector} result vector
      */
     multWithScalar(sc) {
-        const v = new BigIntVector(this.n);
+        const v = new BigIntVector(this.order);
         if( typeof sc !== 'bigint') {
             throw new Error("Scalar sc has to be of type bigint");
         }
         for( let i = 0; i < this.length(); i++ ) {
             if( this.mod ) {
-                v.addElem(Maths.mod(this.get(i) * sc, this.n));
+                v.addElem(Maths.mod(this.get(i) * sc, this.order));
             }
             else {
                 v.addElem(this.get(i) * sc);
@@ -287,14 +287,14 @@ class BigIntVector extends Vector {
         if( typeof sc !== 'bigint' ) {
             throw new Error("Scalar must be bigint");
         }
-        const v = new BigIntVector(this.n);
+        const v = new BigIntVector(this.order);
         for( let i = 0; i < this.length(); i++ ) {
             const val = this.get(i);
             if( typeof val !== 'bigint' ) {
                 throw new Error("Vector may only contain bigints");
             }
             if( this.mod ) {
-                v.addElem(Maths.mod(val - sc, this.n));
+                v.addElem(Maths.mod(val - sc, this.order));
             }
             else {
                 v.addElem(val - sc);
@@ -310,13 +310,13 @@ class BigIntVector extends Vector {
      * @param sc {BigInt}
      */
     addScalar(sc) {
-        const v = new BigIntVector(this.n);
+        const v = new BigIntVector(this.order);
         if( typeof sc !== 'bigint' ) {
             throw new Error("Scalar must be bigint");
         }
         for( let i = 0; i < this.length(); i++ ) {
             if( this.mod ) {
-                v.addElem(Maths.mod(this.get(i) + sc, this.n));
+                v.addElem(Maths.mod(this.get(i) + sc, this.order));
             }
             else {
                 v.addElem(this.get(i) + sc);
@@ -332,7 +332,7 @@ class BigIntVector extends Vector {
      * @return {BigIntVector}
      */
     addVector(vec) {
-        const v = new BigIntVector(this.n);
+        const v = new BigIntVector(this.order);
         if( !(vec instanceof BigIntVector) ) {
             throw new Error("Need to pass another Vector");
         }
@@ -341,7 +341,7 @@ class BigIntVector extends Vector {
         }
         for( let i = 0; i < this.length(); i++ ) {
             if( this.mod ) {
-                v.addElem(Maths.mod(this.get(i) + vec.get(i), this.n));
+                v.addElem(Maths.mod(this.get(i) + vec.get(i), this.order));
             }
             else {
                 v.addElem(this.get(i) + vec.get(i));
@@ -360,7 +360,7 @@ class BigIntVector extends Vector {
         let result = 0n;
         for( let i = 0; i < this.length(); i++ ) {
             if( this.mod ) {
-                result = Maths.mod(result + this.get(i), this.n);
+                result = Maths.mod(result + this.get(i), this.order);
             }
             else {
                 result = result + this.get(i);

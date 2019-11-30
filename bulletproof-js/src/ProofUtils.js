@@ -7,7 +7,7 @@ class ProofUtils {
      * Function delta which can be computed from all
      * non secret terms
      *
-     * @param yn {Vector} vector of challenge param y^n
+     * @param yn {Vector} vector of challenge param y^order
      * @param z {BigInt} challenge param z
      * @param mod {BigInt|boolean} if set it the result will be
      *                             modulos mod

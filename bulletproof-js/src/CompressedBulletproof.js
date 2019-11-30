@@ -1,3 +1,5 @@
+const cryptoutils = require('bigint-crypto-utils');
+
 const RangeProof = require('./RangeProof');
 const Utils = require('./Utils');
 const Maths = require('./Maths');
@@ -98,9 +100,20 @@ class CompressedBulletproof extends RangeProof {
         const c = this.tx;
 
         const leftSide = P.add(this.Q.mul(Utils.toBN(c)));
-        const det = this.ind[0].L.add(this.ind[0].R);
+        const L0 = this.ind[0].L;
+        const R0 = this.ind[0].R;
+        const u0 = this.ind[0].u;
+        const u0_2 = Maths.mod(u0 ** 2n, this.order);
+        const u0_2_inv = cryptoutils.modInv(u0_2, this.order);
+        const det = (L0.mul(u0_2).add(R0.mul(u0_2_inv)));
         for( let j = 1; j < this.ind.length; j++ ) {
-            det.add(this.ind[j].L.add(this.ind[j].R));
+            const Lj = this.ind[j].L;
+            const Rj = this.ind[j].R;
+            // TODO proper Fiat Shamir
+            const uj = this.ind[j].u;
+            const uj_2 = Maths.mod(uj ** 2, this.order);
+            const uj_2_inv = cryptoutils.modInv(uj_2, this.order);
+            det.add(Lj.mul(uj_2).add(Rj.mul(uj_2_inv)));
         }
         const rightSide = this.G0.mul(Utils.toBN(this.a0)).add(this.H0.mul(Utils.toBN(this.b0))).add(this.Q.mul(Utils.toBN(Maths.mod(this.a0 * this.b0, this.order)))).add(det.neg());
         return leftSide.eq(rightSide);

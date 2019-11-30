@@ -2,6 +2,7 @@ const EC = require('elliptic').ec;
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const cryptoutils = require('bigint-crypto-utils');
 
 const Factory = require('../src/ProofFactory');
 const UncompressedBulletproof = require('../src/UncompressedBulletproof');
@@ -141,10 +142,10 @@ describe('Tests for the rangeproof', () => {
         const w = 33n;
         const Q = B.mul(Utils.toBN(w));
         const uk = 3n;
-        const ukneg = -3n;
+        const ukinv = cryptoutils.modInv(uk, order);
 
-        const a = new BigIntVector();
-        const b = new BigIntVector();
+        const a = new BigIntVector(order);
+        const b = new BigIntVector(order);
         a.addElem(50n);
         a.addElem(12n);
         a.addElem(34n);
@@ -163,10 +164,10 @@ describe('Tests for the rangeproof', () => {
         const Hs = PointVector.getVectorFullOfPoint(H, 4);
 
         // Do one round of compression
-        const a_lo = new BigIntVector();
-        const a_hi = new BigIntVector();
-        const b_lo = new BigIntVector();
-        const b_hi = new BigIntVector();
+        const a_lo = new BigIntVector(order);
+        const a_hi = new BigIntVector(order);
+        const b_lo = new BigIntVector(order);
+        const b_hi = new BigIntVector(order);
         const G_lo = new PointVector();
         const H_lo = new PointVector();
         const G_hi = new PointVector();
@@ -197,26 +198,26 @@ describe('Tests for the rangeproof', () => {
         assert(H_lo.length() === 2);
         assert(H_hi.length() === 2);
 
-        const a_sum = new BigIntVector();
-        const b_sum = new BigIntVector();
+        const a_sum = new BigIntVector(order);
+        const b_sum = new BigIntVector(order);
         const G_sum = new PointVector();
         const H_sum = new PointVector();
 
         for(let i = 0; i < a_lo.length(); i++ ) {
-            a_sum.addElem(a_lo.get(i) * uk + ukneg * a_hi.get(i));
-            b_sum.addElem(b_lo.get(i) * ukneg + uk * b_hi.get(i));
-            G_sum.addElem(G_lo.get(i).mul(Utils.toBN(ukneg)).add(G_hi.get(i).mul(Utils.toBN(uk))));
-            H_sum.addElem(H_lo.get(i).mul(Utils.toBN(uk)).add(H_hi.get(i).mul(Utils.toBN(ukneg))));
+            a_sum.addElem(a_lo.get(i) * uk + ukinv * a_hi.get(i));
+            b_sum.addElem(b_lo.get(i) * ukinv + uk * b_hi.get(i));
+            G_sum.addElem(G_lo.get(i).mul(Utils.toBN(ukinv)).add(G_hi.get(i).mul(Utils.toBN(uk))));
+            H_sum.addElem(H_lo.get(i).mul(Utils.toBN(uk)).add(H_hi.get(i).mul(Utils.toBN(ukinv))));
         }
 
-        const Lk = G_hi.multWithBigIntVectorToPoint(a_lo).add(H_lo.multWithBigIntVectorToPoint(b_hi)).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi, this.order))));
-        const Rk = G_lo.multWithBigIntVectorToPoint(a_hi).add(H_hi.multWithBigIntVectorToPoint(b_lo)).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo, this.order))));
+        const Lk = G_hi.multWithBigIntVectorToPoint(a_lo).add(H_lo.multWithBigIntVectorToPoint(b_hi)).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi))));
+        const Rk = G_lo.multWithBigIntVectorToPoint(a_hi).add(H_hi.multWithBigIntVectorToPoint(b_lo)).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo))));
 
-        const Pk = G_sum.multWithBigIntVectorToPoint(a_sum).add(H_sum.multWithBigIntVectorToPoint(b_sum)).add(Q.mul( Utils.toBN(Maths.mod(a_sum.multVectorToScalar(b_sum), order)) ));
+        const Pk = G_sum.multWithBigIntVectorToPoint(a_sum).add(H_sum.multWithBigIntVectorToPoint(b_sum)).add(Q.mul( Utils.toBN(a_sum.multVectorToScalar(b_sum, order), order) ));
         const uk2 = 3n ^ 2n;
-        const ukn2 = - (3n ^ 2n);
+        const uk2inv = cryptoutils.modInv(uk2, order);
 
-        const det = Lk.mul(Utils.toBN(uk2)).add(Rk.mul(Utils.toBN(ukn2)));
+        const det = Lk.mul(Utils.toBN(uk2)).add(Rk.mul(Utils.toBN(uk2inv)));
 
         assert(P_star.eq(Pk.add(det.neg())));
     });

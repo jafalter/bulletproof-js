@@ -1,5 +1,6 @@
 var EC = require('elliptic').ec;
 const assert = require('assert');
+const cryptoutils = require('bigint-crypto-utils');
 
 const RangeProof = require('./RangeProof');
 const Utils = require('./Utils');
@@ -199,14 +200,10 @@ class UncompressedBulletproof extends RangeProof {
         let Gs_tmp = PointVector.getVectorFullOfPoint(this.G, len);
         let Hs_tmp = PointVector.getVectorFullOfPoint(H, len);
 
-        // TODO u_k should be randomly sampled?
-        let u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(w.toString(16)), this.order);
-
         const intermediateTerms = [];
         let first = true;
 
         while (a_tmp.length() > 1) {
-            const u_k_neg = u_k ^ -1n;
             const a_lo = new BigIntVector(this.order);
             const b_lo = new BigIntVector(this.order);
             const G_lo = new PointVector();
@@ -232,10 +229,24 @@ class UncompressedBulletproof extends RangeProof {
                     H_hi.addElem(Hs_tmp.get(i));
                 }
             }
-            assert(a_lo.length() === a_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
-            assert(b_lo.length() === b_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
-            assert(G_lo.length() === G_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
-            assert(H_lo.length() === H_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
+            if( doAssert ) {
+                assert(a_lo.length() === a_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
+                assert(b_lo.length() === b_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
+                assert(G_lo.length() === G_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
+                assert(H_lo.length() === H_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
+            }
+            // Before we get challenge u_k we commit to L_k and R_k
+            const Lk = G_hi.multWithBigIntVectorToPoint(a_lo).add(H_lo.multWithBigIntVectorToPoint(b_hi)).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi, this.order))));
+            const Rk = G_lo.multWithBigIntVectorToPoint(a_hi).add(H_hi.multWithBigIntVectorToPoint(b_lo)).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo, this.order))));
+
+            let u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(w.toString(16)), this.order);
+            const u_k_inv = cryptoutils.modInv(u_k, this.order);
+
+            intermediateTerms.push({
+                L : Lk,
+                R : Rk,
+                u: u_k
+            });
 
             // Now we add up the vectors seperated by u_k
             a_tmp = new BigIntVector(this.order);
@@ -243,34 +254,23 @@ class UncompressedBulletproof extends RangeProof {
             Gs_tmp = new PointVector();
             Hs_tmp = new PointVector();
             for ( let i = 0; i < a_lo.length(); i++ ) {
-                a_tmp.addElem(a_lo.get(i) * u_k + u_k_neg * a_hi.get(i));
-                b_tmp.addElem(b_lo.get(i) * u_k_neg + u_k * b_hi.get(i));
-                Gs_tmp.addElem(G_lo.get(i).mul(Utils.toBN(u_k_neg)).add(G_hi.get(i).mul(Utils.toBN(u_k))));
-                Hs_tmp.addElem(H_lo.get(i).mul(Utils.toBN(u_k)).add(H_hi.get(i).mul(Utils.toBN(u_k_neg))));
+                a_tmp.addElem(a_lo.get(i) * u_k + u_k_inv * a_hi.get(i));
+                b_tmp.addElem(b_lo.get(i) * u_k_inv + u_k * b_hi.get(i));
+                Gs_tmp.addElem(G_lo.get(i).mul(Utils.toBN(u_k_inv)).add(G_hi.get(i).mul(Utils.toBN(u_k))));
+                Hs_tmp.addElem(H_lo.get(i).mul(Utils.toBN(u_k)).add(H_hi.get(i).mul(Utils.toBN(u_k_inv))));
             }
-
-            const Lk = G_hi.multWithBigIntVectorToPoint(a_lo).add(H_lo.multWithBigIntVectorToPoint(b_hi)).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi, this.order))));
-            const Rk = G_lo.multWithBigIntVectorToPoint(a_hi).add(H_hi.multWithBigIntVectorToPoint(b_lo)).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo, this.order))));
-            intermediateTerms.push({
-                L : Lk,
-                R : Rk,
-                u : u_k
-            });
 
             if( doAssert && first ) {
                 const P_star = P.add(Q.mul(Utils.toBN(c)));
                 const Pk = Gs_tmp.multWithBigIntVectorToPoint(a_tmp).add(Hs_tmp.multWithBigIntVectorToPoint(b_tmp)).add(Q.mul(Utils.toBN(Maths.mod(a_tmp.multVectorToScalar(b_tmp), this.order))));
                 const Lj = intermediateTerms[0].L;
                 const Rj = intermediateTerms[0].R;
-                const uj = intermediateTerms[0].u;
-                const uj_2 = Maths.mod(uj ^ 2n, this.order);
-                const uj_2neg = Maths.mod(uj ^ (-2n), this.order);
+                const uj_2 = Maths.mod(u_k ** 2n, this.order);
+                const uj_2neg = cryptoutils.modInv(uj_2, this.order);
                 const det = Lj.mul(Utils.toBN(uj_2)).add(Rj.mul(Utils.toBN(uj_2neg)));
                 assert(P_star.eq(Pk.add(det.neg())))
             }
-            // TODO u_k ranomly sampled?
             first = false;
-            u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(u_k.toString(16)), this.order);
         }
         const G0 = Gs_tmp.get(0);
         const H0 = Hs_tmp.get(0);
