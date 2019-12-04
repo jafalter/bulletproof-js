@@ -197,8 +197,8 @@ class UncompressedBulletproof extends RangeProof {
         const len = this.lx.length();
         let a_tmp = this.lx.clone();
         let b_tmp = this.rx.clone();
-        let Gs_tmp = PointVector.getVectorFullOfPoint(this.G, len);
-        let Hs_tmp = PointVector.getVectorFullOfPoint(H, len);
+        let Gs_tmp = BigIntVector.getVectorWithOnlyScalar(1n, this.rx.length(), this.order);
+        let Hs_tmp = BigIntVector.getVectorWithOnlyScalar(1n, this.rx.length(), this.order);
 
         const intermediateTerms = [];
         let first = true;
@@ -206,13 +206,13 @@ class UncompressedBulletproof extends RangeProof {
         while (a_tmp.length() > 1) {
             const a_lo = new BigIntVector(this.order);
             const b_lo = new BigIntVector(this.order);
-            const G_lo = new PointVector();
-            const H_lo = new PointVector();
+            const G_lo = new BigIntVector(this.order);
+            const H_lo = new BigIntVector(this.order);
 
             const a_hi = new BigIntVector(this.order);
             const b_hi = new BigIntVector(this.order);
-            const G_hi = new PointVector();
-            const H_hi = new PointVector();
+            const G_hi = new BigIntVector(this.order);
+            const H_hi = new BigIntVector(this.order);
 
             const half = a_tmp.length() / 2;
             for( let i = 0; i < a_tmp.length(); i++ ) {
@@ -236,8 +236,8 @@ class UncompressedBulletproof extends RangeProof {
                 assert(H_lo.length() === H_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
             }
             // Before we get challenge u_k we commit to L_k and R_k
-            const Lk = G_hi.multWithBigIntVectorToPoint(a_lo).add(H_lo.multWithBigIntVectorToPoint(b_hi)).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi, this.order))));
-            const Rk = G_lo.multWithBigIntVectorToPoint(a_hi).add(H_hi.multWithBigIntVectorToPoint(b_lo)).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo, this.order))));
+            const Lk = this.G.mul(Utils.toBN(a_lo.multVectorToScalar(G_hi))).add( H.mul(Utils.toBN(b_hi.multVectorToScalar(H_lo))) ).add( Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi, this.order))) );
+            const Rk = this.G.mul(Utils.toBN(a_hi.multVectorToScalar(G_lo))).add( H.mul(Utils.toBN(b_lo.multVectorToScalar(H_hi))) ).add( Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo, this.order))) );
 
             let u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(w.toString(16)), this.order);
             const u_k_inv = cryptoutils.modInv(u_k, this.order);
@@ -251,24 +251,24 @@ class UncompressedBulletproof extends RangeProof {
             // Now we add up the vectors seperated by u_k
             a_tmp = new BigIntVector(this.order);
             b_tmp = new BigIntVector(this.order);
-            Gs_tmp = new PointVector();
-            Hs_tmp = new PointVector();
+            Gs_tmp = new BigIntVector(this.order);
+            Hs_tmp = new BigIntVector(this.order);
             for ( let i = 0; i < a_lo.length(); i++ ) {
                 a_tmp.addElem(a_lo.get(i) * u_k + u_k_inv * a_hi.get(i));
                 b_tmp.addElem(b_lo.get(i) * u_k_inv + u_k * b_hi.get(i));
-                Gs_tmp.addElem(G_lo.get(i).mul(Utils.toBN(u_k_inv)).add(G_hi.get(i).mul(Utils.toBN(u_k))));
-                Hs_tmp.addElem(H_lo.get(i).mul(Utils.toBN(u_k)).add(H_hi.get(i).mul(Utils.toBN(u_k_inv))));
+                Gs_tmp.addElem(G_lo.get(i) * u_k_inv + u_k * G_hi.get(i));
+                Hs_tmp.addElem(H_lo.get(i) * u_k + u_k_inv * H_hi.get(i));
             }
 
             if( doAssert && first ) {
                 const P_star = P.add(Q.mul(Utils.toBN(c)));
-                const Pk = Gs_tmp.multWithBigIntVectorToPoint(a_tmp).add(Hs_tmp.multWithBigIntVectorToPoint(b_tmp)).add(Q.mul(Utils.toBN(Maths.mod(a_tmp.multVectorToScalar(b_tmp), this.order))));
+                const Pk = this.G.mul(Utils.toBN(Gs_tmp.multVectorToScalar(a_tmp))).add( H.mul(Utils.toBN(Hs_tmp.multVectorToScalar(b_tmp))) ).add( Q.mul(Utils.toBN(a_tmp.multVectorToScalar(b_tmp))) );
                 const Lj = intermediateTerms[0].L;
                 const Rj = intermediateTerms[0].R;
                 const uj_2 = Maths.mod(u_k ** 2n, this.order);
                 const uj_2neg = cryptoutils.modInv(uj_2, this.order);
                 const det = Lj.mul(Utils.toBN(uj_2)).add(Rj.mul(Utils.toBN(uj_2neg)));
-                assert(P_star.eq(Pk.add(det.neg())))
+                assert(P_star.add(det).eq(Pk));
             }
             first = false;
         }

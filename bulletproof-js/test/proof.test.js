@@ -136,7 +136,7 @@ describe('Tests for the rangeproof', () => {
     it('Should test the basis of the inner product compression', () => {
         // Setup
 
-        const order = secp256k1.n;
+        const order = 7n;
         const G = ec.g;
         const H = Utils.getnewGenFromHashingGen(G);
         const B = Utils.getnewGenFromHashingGen(H);
@@ -144,23 +144,23 @@ describe('Tests for the rangeproof', () => {
         const w = 2n;
         const Q = B.mul(Utils.toBN(w));
 
-        const Gs = PointVector.getVectorFullOfPoint(G, 4);
-        const Hs = PointVector.getVectorFullOfPoint(H, 4);
+        const Gs = BigIntVector.getVectorWithOnlyScalar(1n, 4, order);
+        const Hs = BigIntVector.getVectorWithOnlyScalar(1n, 4, order);
 
         const a = new BigIntVector(order);
         const b = new BigIntVector(order);
-        a.addElem(7n);
-        a.addElem(8n);
+        a.addElem(3n);
+        a.addElem(4n);
+        a.addElem(0n);
         a.addElem(2n);
-        a.addElem(1n);
 
         b.addElem(1n);
-        b.addElem(8n);
         b.addElem(3n);
-        b.addElem(5n);
+        b.addElem(7n);
+        b.addElem(6n);
 
         // Calculate P star (used later for verification)
-        const P = a.multVectorWithPointToPoint(G).add(b.multVectorWithPointToPoint(H));
+        const P = G.mul(Utils.toBN(a.toScalar())).add(H.mul(b.toScalar()));
         const c = a.multVectorToScalar(b);
         const P_star = P.add(Q.mul(Utils.toBN(c)));
 
@@ -170,10 +170,10 @@ describe('Tests for the rangeproof', () => {
         const a_hi = new BigIntVector(order);
         const b_lo = new BigIntVector(order);
         const b_hi = new BigIntVector(order);
-        const G_lo = new PointVector();
-        const H_lo = new PointVector();
-        const G_hi = new PointVector();
-        const H_hi = new PointVector();
+        const G_lo = new BigIntVector(order);
+        const H_lo = new BigIntVector(order);
+        const G_hi = new BigIntVector(order);
+        const H_hi = new BigIntVector(order);
 
         const half = a.length() / 2;
         for( let i = 0; i < a.length(); i++ ) {
@@ -203,33 +203,36 @@ describe('Tests for the rangeproof', () => {
         // Do one round of the protocol
         const a_sum = new BigIntVector(order);
         const b_sum = new BigIntVector(order);
-        const G_sum = new PointVector();
-        const H_sum = new PointVector();
+        const G_sum = new BigIntVector(order);
+        const H_sum = new BigIntVector(order);
 
-        const Lk = G_hi.multWithBigIntVectorToPoint(a_lo).add(H_lo.multWithBigIntVectorToPoint(b_hi)).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi))));
-        const Rk = G_lo.multWithBigIntVectorToPoint(a_hi).add(H_hi.multWithBigIntVectorToPoint(b_lo)).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo))));
+        const Lk = G.mul(Utils.toBN(a_lo.multVectorToScalar(G_hi))).add(H.mul(Utils.toBN(b_hi.multVectorToScalar(H_lo)))).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi))));
+        const Rk = G.mul(Utils.toBN(a_hi.multVectorToScalar(G_lo))).add(H.mul(Utils.toBN(b_lo.multVectorToScalar(H_lo)))).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo))));
 
-        const uk = 3n;
+        const uk = 2n;
         const ukinv = cryptoutils.modInv(uk, order);
 
         for(let i = 0; i < a_lo.length(); i++ ) {
             a_sum.addElem(a_lo.get(i) * uk + ukinv * a_hi.get(i));
             b_sum.addElem(b_lo.get(i) * ukinv + uk * b_hi.get(i));
-            G_sum.addElem(G_lo.get(i).mul(Utils.toBN(ukinv)).add(G_hi.get(i).mul(Utils.toBN(uk))));
-            H_sum.addElem(H_lo.get(i).mul(Utils.toBN(uk)).add(H_hi.get(i).mul(Utils.toBN(ukinv))));
+            G_sum.addElem( G_lo.get(i) * ukinv + uk * G_hi.get(i));
+            H_sum.addElem(H_lo.get(i) * uk + ukinv * H_hi.get(i));
         }
 
         // Calculate the new P with the new compressed vectors
-        const Pk = G_sum.multWithBigIntVectorToPoint(a_sum).add(H_sum.multWithBigIntVectorToPoint(b_sum)).add(Q.mul( Utils.toBN(a_sum.multVectorToScalar(b_sum)) ));
+        const Pk = G.mul(Utils.toBN(a_sum.multVectorToScalar(G_sum))).add( H.mul(Utils.toBN(b_sum.multVectorToScalar(H_sum))) ).add(Q.mul( Utils.toBN(a_sum.multVectorToScalar(b_sum)) ));
 
         // The new P should be P* + Lk * uk² + Rk * uk-²
-        const uk2 = Maths.mod(3n ** 2n, order);
+        const uk2 = Maths.mod(uk ** 2n, order);
         const uk2inv = cryptoutils.modInv(uk2, order);
 
-        const Pk_comp = P_star.add(Lk.mul(Utils.toBN(uk2))).add(Rk.mul(Utils.toBN(uk2inv)));
+        const Lkuk2 = Lk.mul(Utils.toBN(uk2));
+        const Rkuk2inv = Rk.mul(Utils.toBN(uk2inv));
+
+        const Pk_comp = P_star.add(Lkuk2).add(Rkuk2inv);
         assert(Pk_comp.eq(Pk));
 
-        //const det = Lk.mul(Utils.toBN(uk2)).add(Rk.mul(Utils.toBN(uk2inv)));
-        //assert(P_star.eq(Pk.add(det.neg())));
+        const det = Lk.mul(Utils.toBN(uk2)).add(Rk.mul(Utils.toBN(uk2inv)));
+        assert(P_star.eq(Pk.add(det.neg())));
     });
 });
