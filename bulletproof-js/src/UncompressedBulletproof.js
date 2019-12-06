@@ -266,7 +266,7 @@ class UncompressedBulletproof extends RangeProof {
                 const Lj = intermediateTerms[0].L;
                 const Rj = intermediateTerms[0].R;
                 const uj_2 = Maths.mod(u_k ** 2n, this.order);
-                const uj_2neg = cryptoutils.modInv(uj_2, this.order);
+                const uj_2neg = Maths.mod( u_k_inv ** 2n, this.order);
                 const det = Lj.mul(Utils.toBN(uj_2)).add(Rj.mul(Utils.toBN(uj_2neg)));
                 assert(P_star.add(det).eq(Pk));
             }

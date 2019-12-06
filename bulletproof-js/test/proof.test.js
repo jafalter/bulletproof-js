@@ -227,12 +227,16 @@ describe('Tests for the rangeproof', () => {
         const uk2inv = cryptoutils.modInv(uk2, order);
 
         const Lkuk2 = Lk.mul(Utils.toBN(uk2));
+        const Lkuk22 = G.mul(Utils.toBN(Maths.mod(a_lo.multVectorToScalar(G_hi) * uk2, order))).add(H.mul(Utils.toBN(Maths.mod(b_hi.multVectorToScalar(H_lo) * uk2, order)))).add(Q.mul(Utils.toBN(Maths.mod(a_lo.multVectorToScalar(b_hi) * uk2, order))));
+        assert(Lkuk2.eq(Lkuk22));
         const Rkuk2inv = Rk.mul(Utils.toBN(uk2inv));
+        const Rkuk2inv2 = G.mul(Utils.toBN(Maths.mod(a_hi.multVectorToScalar(G_lo) * uk2inv, order))).add(H.mul(Utils.toBN(Maths.mod(b_lo.multVectorToScalar(H_lo) * uk2inv, order)))).add(Q.mul(Utils.toBN(Maths.mod(a_hi.multVectorToScalar(b_lo)* uk2inv, order))));
+        assert(Rkuk2inv2.eq(Rkuk2inv));
 
-        const Pk_comp = P_star.add(Lkuk2).add(Rkuk2inv);
+        const Pk_comp = P_star.add(Lkuk22).add(Rkuk2inv2);
         assert(Pk_comp.eq(Pk));
 
-        const det = Lk.mul(Utils.toBN(uk2)).add(Rk.mul(Utils.toBN(uk2inv)));
-        assert(P_star.eq(Pk.add(det.neg())));
+        //const det = Lk.mul(Utils.toBN(uk2)).add(Rk.mul(Utils.toBN(uk2inv)));
+        //assert(P_star.eq(Pk.add(det.neg())));
     });
 });
