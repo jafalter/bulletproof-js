@@ -136,13 +136,14 @@ describe('Tests for the rangeproof', () => {
     it('Should test the basis of the inner product compression', () => {
         // Setup
 
-        const order = 7n;
+        const order = secp256k1.n;
         const G = ec.g;
         const H = Utils.getnewGenFromHashingGen(G);
         const B = Utils.getnewGenFromHashingGen(H);
 
         const w = 2n;
-        const Q = B.mul(Utils.toBN(w));
+        const wBN = Utils.toBN(w);
+        const Q = B.mul(wBN);
 
         const Gs = BigIntVector.getVectorWithOnlyScalar(1n, 4, order);
         const Hs = BigIntVector.getVectorWithOnlyScalar(1n, 4, order);
@@ -160,9 +161,12 @@ describe('Tests for the rangeproof', () => {
         b.addElem(6n);
 
         // Calculate P star (used later for verification)
-        const P = G.mul(Utils.toBN(a.toScalar())).add(H.mul(b.toScalar()));
+        const aBN = Utils.toBN(a.toScalar());
+        const bBN = Utils.toBN(b.toScalar());
+        const P = G.mul(aBN).add(H.mul(bBN));
         const c = a.multVectorToScalar(b);
-        const P_star = P.add(Q.mul(Utils.toBN(c)));
+        const cBN = Utils.toBN(c);
+        const P_star = P.add(Q.mul(cBN));
 
 
         // Seperate a, b, G and H into hi and low
@@ -206,11 +210,21 @@ describe('Tests for the rangeproof', () => {
         const G_sum = new BigIntVector(order);
         const H_sum = new BigIntVector(order);
 
-        const Lk = G.mul(Utils.toBN(a_lo.multVectorToScalar(G_hi))).add(H.mul(Utils.toBN(b_hi.multVectorToScalar(H_lo)))).add(Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi))));
-        const Rk = G.mul(Utils.toBN(a_hi.multVectorToScalar(G_lo))).add(H.mul(Utils.toBN(b_lo.multVectorToScalar(H_lo)))).add(Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo))));
+        const a_lo_G_hi = Utils.toBN(a_lo.multVectorToScalar(G_hi));
+        const b_hi_H_lo = Utils.toBN(b_hi.multVectorToScalar(H_lo));
+        const a_lo_b_hi = Utils.toBN(a_lo.multVectorToScalar(b_hi));
+        const a_hi_G_lo = Utils.toBN(a_hi.multVectorToScalar(G_lo));
+        const b_lo_H_hi = Utils.toBN(b_lo.multVectorToScalar(H_hi));
+        const a_hi_b_lo = Utils.toBN(a_hi.multVectorToScalar(b_lo));
+
+        const Lk = G.mul(a_lo_G_hi).add(H.mul(b_hi_H_lo)).add(Q.mul(a_lo_b_hi));
+        const Rk = G.mul(a_hi_G_lo).add(H.mul(b_lo_H_hi)).add(Q.mul(a_hi_b_lo));
 
         const uk = 2n;
         const ukinv = cryptoutils.modInv(uk, order);
+
+        assert(Maths.mod(uk * ukinv, order) === 1n);
+        assert(G.mul(Utils.toBN(uk * ukinv)).eq(G));
 
         for(let i = 0; i < a_lo.length(); i++ ) {
             a_sum.addElem(a_lo.get(i) * uk + ukinv * a_hi.get(i));
@@ -220,20 +234,28 @@ describe('Tests for the rangeproof', () => {
         }
 
         // Calculate the new P with the new compressed vectors
-        const Pk = G.mul(Utils.toBN(a_sum.multVectorToScalar(G_sum))).add( H.mul(Utils.toBN(b_sum.multVectorToScalar(H_sum))) ).add(Q.mul( Utils.toBN(a_sum.multVectorToScalar(b_sum)) ));
+        const a_sum_G_sum = Utils.toBN(a_sum.multVectorToScalar(G_sum));
+        const b_sum_H_sum = Utils.toBN(b_sum.multVectorToScalar(H_sum));
+        const a_sum_b_sum = Utils.toBN(a_sum.multVectorToScalar(b_sum));
+        const Pk = G.mul(a_sum_G_sum).add(H.mul(b_sum_H_sum)).add(Q.mul(a_sum_b_sum));
 
         // The new P should be P* + Lk * uk² + Rk * uk-²
         const uk2 = Maths.mod(uk ** 2n, order);
         const uk2inv = cryptoutils.modInv(uk2, order);
 
-        const Lkuk2 = Lk.mul(Utils.toBN(uk2));
-        const Lkuk22 = G.mul(Utils.toBN(Maths.mod(a_lo.multVectorToScalar(G_hi) * uk2, order))).add(H.mul(Utils.toBN(Maths.mod(b_hi.multVectorToScalar(H_lo) * uk2, order)))).add(Q.mul(Utils.toBN(Maths.mod(a_lo.multVectorToScalar(b_hi) * uk2, order))));
-        assert(Lkuk2.eq(Lkuk22));
-        const Rkuk2inv = Rk.mul(Utils.toBN(uk2inv));
-        const Rkuk2inv2 = G.mul(Utils.toBN(Maths.mod(a_hi.multVectorToScalar(G_lo) * uk2inv, order))).add(H.mul(Utils.toBN(Maths.mod(b_lo.multVectorToScalar(H_lo) * uk2inv, order)))).add(Q.mul(Utils.toBN(Maths.mod(a_hi.multVectorToScalar(b_lo)* uk2inv, order))));
-        assert(Rkuk2inv2.eq(Rkuk2inv));
+        assert(Maths.mod(uk2 * uk2inv, order) === 1n);
+        assert(G.mul(Utils.toBN(uk2 * uk2inv)).eq(G));
 
-        const Pk_comp = P_star.add(Lkuk22).add(Rkuk2inv2);
+        const uk2BN = Utils.toBN(uk2);
+        const uk2invBN = Utils.toBN(uk2inv);
+        const Lkuk2 = Lk.mul(uk2BN);
+        //const Lkuk22 = G.mul(Utils.toBN(Maths.mod(a_lo.multVectorToScalar(G_hi) * uk2, order))).add(H.mul(Utils.toBN(Maths.mod(b_hi.multVectorToScalar(H_lo) * uk2, order)))).add(Q.mul(Utils.toBN(Maths.mod(a_lo.multVectorToScalar(b_hi) * uk2, order))));
+        //assert(Lkuk2.eq(Lkuk22));
+        const Rkuk2inv = Rk.mul(uk2invBN);
+        //const Rkuk2inv2 = G.mul(Utils.toBN(Maths.mod(a_hi.multVectorToScalar(G_lo) * uk2inv, order))).add(H.mul(Utils.toBN(Maths.mod(b_lo.multVectorToScalar(H_lo) * uk2inv, order)))).add(Q.mul(Utils.toBN(Maths.mod(a_hi.multVectorToScalar(b_lo)* uk2inv, order))));
+        //assert(Rkuk2inv2.eq(Rkuk2inv));
+
+        const Pk_comp = P_star.add(Lkuk2).add(Rkuk2inv);
         assert(Pk_comp.eq(Pk));
 
         //const det = Lk.mul(Utils.toBN(uk2)).add(Rk.mul(Utils.toBN(uk2inv)));
