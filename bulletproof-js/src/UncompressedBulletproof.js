@@ -180,53 +180,62 @@ class UncompressedBulletproof extends RangeProof {
      * @return {CompressedBulletproof}
      */
     compressProof(doAssert=false) {
-        const H = Utils.getnewGenFromHashingGen(this.G);
+        const G = this.G;
+        const n = this.order;
+        const H = Utils.getnewGenFromHashingGen(G);
+
+        const a = this.lx.clone();
+        const b = this.rx.clone();
 
         // Orthogonal generator B
         const B = Utils.getnewGenFromHashingGen(H);
         // Indeterminate variable w
-        const w = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.x.toString(16)), this.order);
+        const w = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.x.toString(16)), n);
+        const wBN = Utils.toBN(w);
 
-        const P = this.lx.multVectorWithPointToPoint(this.G).add(this.rx.multVectorWithPointToPoint(H));
-        const c = this.lx.multVectorToScalar(this.rx, this.order);
-        const Q = B.mul(Utils.toBN(w));
+        const aBN = Utils.toBN(a.toScalar());
+        const bBN = Utils.toBN(b.toScalar());
+        const P = G.mul(aBN).add(H.mul(bBN));
+        const c = a.multVectorToScalar(b);
+        const cBN = Utils.toBN(c);
+        const Q = B.mul(wBN);
 
         /* Now we need k iterations to half the vectors
            until we arrive at single element vectors
         */
-        const len = this.lx.length();
-        let a_tmp = this.lx.clone();
-        let b_tmp = this.rx.clone();
-        let Gs_tmp = BigIntVector.getVectorWithOnlyScalar(1n, this.rx.length(), this.order);
-        let Hs_tmp = BigIntVector.getVectorWithOnlyScalar(1n, this.rx.length(), this.order);
+        const len = a.length();
+        let a_sum = a.clone();
+        let b_sum = b.clone();
+        let G_sum = BigIntVector.getVectorWithOnlyScalar(1n, len, n);
+        let H_sum = BigIntVector.getVectorWithOnlyScalar(1n, len, n);
 
         const intermediateTerms = [];
         let first = true;
 
-        while (a_tmp.length() > 1) {
-            const a_lo = new BigIntVector(this.order);
-            const b_lo = new BigIntVector(this.order);
-            const G_lo = new BigIntVector(this.order);
-            const H_lo = new BigIntVector(this.order);
+        while (a_sum.length() > 1) {
+            const a_lo = new BigIntVector(n);
+            const b_lo = new BigIntVector(n);
+            const G_lo = new BigIntVector(n);
+            const H_lo = new BigIntVector(n);
 
-            const a_hi = new BigIntVector(this.order);
-            const b_hi = new BigIntVector(this.order);
-            const G_hi = new BigIntVector(this.order);
-            const H_hi = new BigIntVector(this.order);
+            const a_hi = new BigIntVector(n);
+            const b_hi = new BigIntVector(n);
+            const G_hi = new BigIntVector(n);
+            const H_hi = new BigIntVector(n);
 
-            const half = a_tmp.length() / 2;
-            for( let i = 0; i < a_tmp.length(); i++ ) {
+            const half = a_sum.length() / 2;
+            for( let i = 0; i < a_sum.length(); i++ ) {
                 if( i < half ) {
-                    a_lo.addElem(a_tmp.get(i));
-                    b_lo.addElem(b_tmp.get(i));
-                    G_lo.addElem(Gs_tmp.get(i));
-                    H_lo.addElem(Hs_tmp.get(i));
+                    a_lo.addElem(a_sum.get(i));
+                    b_lo.addElem(b_sum.get(i));
+                    G_lo.addElem(G_sum.get(i));
+                    H_lo.addElem(H_sum.get(i));
                 }
                 else {
-                    a_hi.addElem(a_tmp.get(i));
-                    b_hi.addElem(b_tmp.get(i));
-                    G_hi.addElem(Gs_tmp.get(i));
-                    H_hi.addElem(Hs_tmp.get(i));
+                    a_hi.addElem(a_sum.get(i));
+                    b_hi.addElem(b_sum.get(i));
+                    G_hi.addElem(G_sum.get(i));
+                    H_hi.addElem(H_sum.get(i));
                 }
             }
             if( doAssert ) {
@@ -236,48 +245,71 @@ class UncompressedBulletproof extends RangeProof {
                 assert(H_lo.length() === H_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
             }
             // Before we get challenge u_k we commit to L_k and R_k
-            const Lk = this.G.mul(Utils.toBN(a_lo.multVectorToScalar(G_hi))).add( H.mul(Utils.toBN(b_hi.multVectorToScalar(H_lo))) ).add( Q.mul(Utils.toBN(a_lo.multVectorToScalar(b_hi, this.order))) );
-            const Rk = this.G.mul(Utils.toBN(a_hi.multVectorToScalar(G_lo))).add( H.mul(Utils.toBN(b_lo.multVectorToScalar(H_hi))) ).add( Q.mul(Utils.toBN(a_hi.multVectorToScalar(b_lo, this.order))) );
+            const a_lo_G_hi = Utils.toBN(a_lo.multVectorToScalar(G_hi));
+            const b_hi_H_lo = Utils.toBN(b_hi.multVectorToScalar(H_lo));
+            const a_lo_b_hi = Utils.toBN(a_lo.multVectorToScalar(b_hi));
+            const a_hi_G_lo = Utils.toBN(a_hi.multVectorToScalar(G_lo));
+            const b_lo_H_hi = Utils.toBN(b_lo.multVectorToScalar(H_hi));
+            const a_hi_b_lo = Utils.toBN(a_hi.multVectorToScalar(b_lo));
 
-            let u_k = Utils.getFiatShamirChallenge(Utils.scalarToPoint(w.toString(16)), this.order);
-            const u_k_inv = cryptoutils.modInv(u_k, this.order);
+            const Lk = G.mul(a_lo_G_hi).add(H.mul(b_hi_H_lo)).add(Q.mul(a_lo_b_hi));
+            const Rk = G.mul(a_hi_G_lo).add(H.mul(b_lo_H_hi)).add(Q.mul(a_hi_b_lo));
+
+            let uk = Utils.getFiatShamirChallenge(Utils.scalarToPoint(w.toString(16)), n);
+            const ukinv = cryptoutils.modInv(uk, n);
+
+            if( doAssert ) {
+                assert(Maths.mod(uk * ukinv, n) === 1n);
+                assert(G.mul(Utils.toBN(uk * ukinv)).eq(G));
+            }
 
             intermediateTerms.push({
                 L : Lk,
                 R : Rk,
-                u: u_k
+                u: uk
             });
 
             // Now we add up the vectors seperated by u_k
-            a_tmp = new BigIntVector(this.order);
-            b_tmp = new BigIntVector(this.order);
-            Gs_tmp = new BigIntVector(this.order);
-            Hs_tmp = new BigIntVector(this.order);
+            a_sum = new BigIntVector(n);
+            b_sum = new BigIntVector(n);
+            G_sum = new BigIntVector(n);
+            H_sum = new BigIntVector(n);
             for ( let i = 0; i < a_lo.length(); i++ ) {
-                a_tmp.addElem(a_lo.get(i) * u_k + u_k_inv * a_hi.get(i));
-                b_tmp.addElem(b_lo.get(i) * u_k_inv + u_k * b_hi.get(i));
-                Gs_tmp.addElem(G_lo.get(i) * u_k_inv + u_k * G_hi.get(i));
-                Hs_tmp.addElem(H_lo.get(i) * u_k + u_k_inv * H_hi.get(i));
+                a_sum.addElem(a_lo.get(i) * uk + ukinv * a_hi.get(i));
+                b_sum.addElem(b_lo.get(i) * ukinv + uk * b_hi.get(i));
+                G_sum.addElem(G_lo.get(i) * ukinv + uk * G_hi.get(i));
+                H_sum.addElem(H_lo.get(i) * uk + ukinv * H_hi.get(i));
             }
 
             if( doAssert && first ) {
-                const P_star = P.add(Q.mul(Utils.toBN(c)));
-                const Pk = this.G.mul(Utils.toBN(Gs_tmp.multVectorToScalar(a_tmp))).add( H.mul(Utils.toBN(Hs_tmp.multVectorToScalar(b_tmp))) ).add( Q.mul(Utils.toBN(a_tmp.multVectorToScalar(b_tmp))) );
+                const P_star = P.add(Q.mul(cBN));
+                const a_sum_G_sum = Utils.toBN(a_sum.multVectorToScalar(G_sum));
+                const b_sum_H_sum = Utils.toBN(b_sum.multVectorToScalar(H_sum));
+                const a_sum_b_sum = Utils.toBN(a_sum.multVectorToScalar(b_sum));
+                const Pk = G.mul(a_sum_G_sum).add(H.mul(b_sum_H_sum)).add(Q.mul(a_sum_b_sum));
                 const Lj = intermediateTerms[0].L;
                 const Rj = intermediateTerms[0].R;
-                const uj_2 = Maths.mod(u_k ** 2n, this.order);
-                const uj_2neg = Maths.mod( u_k_inv ** 2n, this.order);
-                const det = Lj.mul(Utils.toBN(uj_2)).add(Rj.mul(Utils.toBN(uj_2neg)));
-                assert(P_star.add(det).eq(Pk));
+                const uj2 = Maths.mod(uk ** 2n, n);
+                const uj2_BN = Utils.toBN(uj2);
+                const uj2inv = Maths.mod( cryptoutils.modInv(uj2, n), n);
+                const uj2invBN = Utils.toBN(uj2inv);
+
+                assert(Maths.mod(uj2 * uj2inv, n) === 1n);
+                assert(G.mul(Utils.toBN(uj2 * uj2inv)).eq(G));
+
+                const Lkuj2 = Lj.mul(uj2_BN);
+                const Rkuj2inv = Rj.mul(uj2invBN);
+                const Pk_comp = P_star.add(Lkuj2).add(Rkuj2inv);
+                assert(Pk_comp.eq(Pk));
             }
             first = false;
         }
-        const G0 = Gs_tmp.get(0);
-        const H0 = Hs_tmp.get(0);
-        const a0 = a_tmp.get(0);
-        const b0 = a_tmp.get(0);
+        const G0 = G_sum.get(0);
+        const H0 = H_sum.get(0);
+        const a0 = a_sum.get(0);
+        const b0 = a_sum.get(0);
         if( doAssert ) {
-            const P_star = P.add(B.mul(Utils.toBN(Maths.mod(w * c, this.order))));
+            const P_star = P.add(Q.mul(cBN));
             const L0 = intermediateTerms[0].L;
             const R0 = intermediateTerms[0].R;
             const u0 = intermediateTerms[0].u;
@@ -288,11 +320,11 @@ class UncompressedBulletproof extends RangeProof {
                 const Lj = intermediateTerms[j].L;
                 const Rj = intermediateTerms[j].R;
                 const uj = intermediateTerms[j].u;
-                const uj_2 = Maths.mod(uj ^ 2n, this.order);
-                const uj_2neg = Maths.mod(uj ^(-2n), this.order);
+                const uj_2 = Maths.mod(uj ^ 2n, n);
+                const uj_2neg = Maths.mod(uj ^(-2n), n);
                 det.add(Lj.mul(uj_2).add(Rj.mul(uj_2neg)));
             }
-            const P_cmp = this.G.mul(Utils.toBN(a0)).add(H.mul(Utils.toBN(b0))).add(Q.mul(Utils.toBN(Maths.mod(a0 * b0, this.order)))).add(det.neg());
+            const P_cmp = G.mul(Utils.toBN(a0)).add(H.mul(Utils.toBN(b0))).add(Q.mul(Utils.toBN(Maths.mod(a0 * b0, n)))).add(det.neg());
             assert(P_star.eq(P_cmp), 'What the verifier will check');
         }
         return new CompressedBulletproof(
@@ -310,8 +342,8 @@ class UncompressedBulletproof extends RangeProof {
             H0,
             intermediateTerms,
             Q,
-            this.G,
-            this.order
+            G,
+            n
         );
     }
 }
