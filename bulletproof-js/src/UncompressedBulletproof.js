@@ -307,25 +307,37 @@ class UncompressedBulletproof extends RangeProof {
         const G0 = G_sum.get(0);
         const H0 = H_sum.get(0);
         const a0 = a_sum.get(0);
-        const b0 = a_sum.get(0);
+        const b0 = b_sum.get(0);
+        const a0G0BN = Utils.toBN(Maths.mod(a0 * G0, n));
+        const b0H0BN = Utils.toBN(Maths.mod(b0 * H0, n));
+        const c0 = Maths.mod(a0 * b0, n);
+        const c0BN = Utils.toBN(c0);
         if( doAssert ) {
             const P_star = P.add(Q.mul(cBN));
             const L0 = intermediateTerms[0].L;
             const R0 = intermediateTerms[0].R;
             const u0 = intermediateTerms[0].u;
-            const u0_2 = u0 ^2n;
-            const u0_2neg = u0 ^(-2n);
-            const det = L0.mul(u0_2).add(R0.mul(u0_2neg));
+            const u02 = Maths.mod(u0 ** 2n, n);
+            const u02BN = Utils.toBN(u02);
+            const u02inv = cryptoutils.modInv(u02, n);
+            const u02invBN = Utils.toBN(u02inv);
+            let det = L0.mul(u02BN).add(R0.mul(u02invBN));
             for( let j = 1; j < intermediateTerms.length; j++ ) {
                 const Lj = intermediateTerms[j].L;
                 const Rj = intermediateTerms[j].R;
                 const uj = intermediateTerms[j].u;
-                const uj_2 = Maths.mod(uj ^ 2n, n);
-                const uj_2neg = Maths.mod(uj ^(-2n), n);
-                det.add(Lj.mul(uj_2).add(Rj.mul(uj_2neg)));
+                const uj2 = Maths.mod(uj ** 2n, n);
+                const uj2BN = Utils.toBN(uj2);
+                const uj2inv = cryptoutils.modInv(uj2, n);
+                const uj2invBN = Utils.toBN(uj2inv);
+                const Ljuj2 = Lj.mul(uj2BN);
+                const Rjuj2inv = Rj.mul(uj2invBN);
+                det = det.add(Ljuj2).add(Rjuj2inv);
             }
-            const P_cmp = G.mul(Utils.toBN(a0)).add(H.mul(Utils.toBN(b0))).add(Q.mul(Utils.toBN(Maths.mod(a0 * b0, n)))).add(det.neg());
-            assert(P_star.eq(P_cmp), 'What the verifier will check');
+            const detinv = det.neg();
+
+            const P0 = G.mul(a0G0BN).add(H.mul(b0H0BN)).add(Q.mul(c0BN));
+            assert(P_star.eq(P0.add(detinv)), 'What the verifier will check');
         }
         return new CompressedBulletproof(
             this.V,
@@ -338,8 +350,6 @@ class UncompressedBulletproof extends RangeProof {
             this.e,
             a0,
             b0,
-            G0,
-            H0,
             intermediateTerms,
             Q,
             G,
