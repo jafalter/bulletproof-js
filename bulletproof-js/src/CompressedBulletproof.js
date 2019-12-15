@@ -1,6 +1,7 @@
 const cryptoutils = require('bigint-crypto-utils');
 
 const RangeProof = require('./RangeProof');
+const Transcript = require('./Transcript');
 const Utils = require('./Utils');
 const Maths = require('./Maths');
 const BigIntVector = require('./BigIntVector');
@@ -42,10 +43,16 @@ class CompressedBulletproof extends RangeProof {
         this.G = G;
         this.order = order;
 
+        this.T = new Transcript();
+        this.T.addPoint(this.A);
+        this.T.addPoint(this.S);
+
         // Calculate the challenges y, z, x by using Fiat Shimar
-        this.y = Utils.getFiatShamirChallenge(this.V, this.order);
-        this.z = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.y.toString(16)), this.order);
-        this.x = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.z.toString(16)), this.order);
+        this.y = Utils.getFiatShamirChallengeTranscript(this.T, this.order);
+        this.z = Utils.getFiatShamirChallengeTranscript(this.T, this.order);
+        this.T.addPoint(T1);
+        this.T.addPoint(T2);
+        this.x = Utils.getFiatShamirChallengeTranscript(this.T, this.order);
     }
 
     verify(low, up) {

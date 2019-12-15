@@ -9,7 +9,6 @@ const UncompressedBulletproof = require('../src/UncompressedBulletproof');
 const Utils = require('../src/Utils');
 const Maths = require('../src/Maths');
 const BigIntVector = require('../src/BigIntVector');
-const PointVector = require('../src/PointVector');
 const secp256k1 = require('../src/Constants').secp256k1;
 
 const ec = new EC('secp256k1');

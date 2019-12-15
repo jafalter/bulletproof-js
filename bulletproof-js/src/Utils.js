@@ -105,22 +105,23 @@ class Utils {
     }
 
     /**
-     * Generate the next challenge using the
-     * Fiat shamir heuristic
+     * Get Challenge value from Proof Transcript
      *
-     * @param commitment {Point} Elliptic curve point
-     *                           from which the next challenge will
-     *                           ge calculated from by sha256 hashing it
-     * @param mod        {BigInt} the modulus of the elliptic curve
-     * @return {BigInt}
+     * @param ts {Transcript} Transcript of the proof
+     * @param n {BigInt} modulus to which challenge should be returned
+     * @param retPoint {boolean} If true return a point, else the scalar
      */
-    static getFiatShamirChallenge(commitment, mod) {
-        if( typeof mod !== 'bigint' ) {
-            throw new Error("Please provide mod as bigint");
+    static getFiatShamirChallengeTranscript(ts, n, retPoint=false) {
+        if( typeof n !== 'bigint' ) {
+            throw new Error("Please provide n as a BigInt value");
         }
-        const hex = Utils.sha256pointtohex(commitment);
-        const num = BigInt('0x' + hex);
-        return Maths.mod(num, mod);
+        else {
+            const hex = Utils.sha256strtohex(ts.toString());
+            const num = Maths.mod(BigInt('0x' + hex), n);
+            const p = ec.g.mul(num);
+            ts.addPoint(p);
+            return retPoint ? p : num;
+        }
     }
 
     /**

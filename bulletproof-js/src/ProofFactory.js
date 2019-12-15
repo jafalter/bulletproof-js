@@ -1,6 +1,7 @@
 const assert = require('assert');
 
 const Utils = require('./Utils');
+const Transcript = require('./Transcript');
 const BigIntVector = require('./BigIntVector');
 const Maths = require('./Maths');
 const UncompressedBulletproof = require('./UncompressedBulletproof');
@@ -28,6 +29,7 @@ class ProofFactory {
      */
     static computeBulletproof(v, bf, V, G, H, lowBound, upBound, order, doAssert=true, randomNum=false) {
 
+        const T = new Transcript();
         if( typeof v !== "bigint" || typeof  bf !== "bigint" || typeof lowBound !== "bigint" || typeof upBound !== "bigint" ) {
             throw new Error("Parameters val, x, low and upper bound have to be bigints");
         }
@@ -76,6 +78,7 @@ class ProofFactory {
         // Commit to those values in a pedersen commitment (is needed later)
         const a_bf = randomNum(order);
         const A = Utils.getVectorPedersenCommitment(a_L, a_R, a_bf, order, H);
+        T.addPoint(A);
         if( doAssert ) assert(a_L.multVectorToScalar(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
 
         /*
@@ -93,13 +96,29 @@ class ProofFactory {
         * https://doc-internal.dalek.rs/bulletproofs/notes/range_proof/index.html
         */
 
-        const y = Utils.getFiatShamirChallenge(V, order);
+        // We can't sent this two vectors to the verifier since it would leak information about v.
+        // Note that the inner-product argument which is actually transmitted instead of the full vectors
+        // are not zero-knowledge and therefore can't be used either.
+        // Therefore we need to introduce additional blinding factors
+        const s_L = new BigIntVector(order);
+        const s_R = new BigIntVector(order);
+        for( let i = 0; i < len; i++ ) {
+            const r1 = randomNum(order);
+            const r2 = randomNum(order);
+            s_L.addElem(r1);
+            s_R.addElem(r2);
+        }
+        // We need to commit to s_L and s_R
+        const s_bf = randomNum(order);
+        const S = Utils.getVectorPedersenCommitment(s_L, s_R, s_bf, order, H);
+        T.addPoint(S);
+
+        const y = Utils.getFiatShamirChallengeTranscript(T, order);
         const y_n = BigIntVector.getVectorToPowerN( y, BigInt(a_L.length()), order );
         const y_negn = BigIntVector.getVectorToPowerN( -y, BigInt(a_L.length()), order);
         if( doAssert ) assert(y_n.length() === a_L.length() && y_n.length() === a_R.length(), "All vectors should be same length");
 
-        const yP = Utils.scalarToPoint(y.toString(16));
-        const z = Utils.getFiatShamirChallenge(yP, order);
+        const z = Utils.getFiatShamirChallengeTranscript(T, order, false);
         const zsq = Maths.mod(z ** 2n, order);
 
         const twos_times_zsq = vec2.multWithScalar(zsq);
@@ -118,22 +137,6 @@ class ProofFactory {
             // as is done below:
             assert(lefthandside === righthandside, "Non secret terms should equal the multiplication of the vectors");
         }
-
-        // However we can't sent this two vectors to the verifier since it would leak information about v.
-        // Note that the inner-product argument which is actually transmitted instead of the full vectors
-        // are not zero-knowledge and therefore can't be used either.
-        // Therefore we need to introduce additional blinding factors
-        const s_L = new BigIntVector(order);
-        const s_R = new BigIntVector(order);
-        for( let i = 0; i < len; i++ ) {
-            const r1 = randomNum(order);
-            const r2 = randomNum(order);
-            s_L.addElem(r1);
-            s_R.addElem(r2);
-        }
-        // We need to commit to s_L and s_R
-        const s_bf = randomNum(order);
-        const S = Utils.getVectorPedersenCommitment(s_L, s_R, s_bf, order, H);
 
         // The blinded l(x) and r(x) have a_L and a_R replaced by
         // blinded terms a_L + s_L*x and a_R + s_R*x
@@ -183,13 +186,14 @@ class ProofFactory {
 
         const t1_bf = randomNum(order);
         const T1 = Utils.getPedersenCommitment(t1, t1_bf, order, H);
+        T.addPoint(T1);
 
         const t2_bf = randomNum(order);
         const T2 = Utils.getPedersenCommitment(t2, t2_bf, order, H);
+        T.addPoint(T2);
 
         // Now we get the challenge point x
-        const zP = Utils.scalarToPoint(z.toString(16));
-        const x = Utils.getFiatShamirChallenge(zP, order);
+        const x = Utils.getFiatShamirChallengeTranscript(T, order, false);
 
         const xsq = Maths.mod(x ** 2n, order);
         const tx = Maths.mod(t0 + t1 * x + t2 * xsq, order);

@@ -6,7 +6,7 @@ const RangeProof = require('./RangeProof');
 const Utils = require('./Utils');
 const BigIntVector = require('./BigIntVector');
 const Maths = require('./Maths');
-const PointVector = require('./PointVector');
+const Transcript = require('./Transcript');
 const CompressedBulletproof = require('./CompressedBulletproof');
 const ProofUtils = require('./ProofUtils');
 
@@ -72,11 +72,16 @@ class UncompressedBulletproof extends RangeProof {
         this.rx = rx;
         this.G = G;
         this.order = order;
+        this.T = new Transcript();
+        this.T.addPoint(this.A);
+        this.T.addPoint(this.S);
 
         // Calculate the challenges y, z, x by using Fiat Shimar
-        this.y = Utils.getFiatShamirChallenge(this.V, this.order);
-        this.z = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.y.toString(16)), this.order);
-        this.x = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.z.toString(16)), this.order);
+        this.y = Utils.getFiatShamirChallengeTranscript(this.T, this.order);
+        this.z = Utils.getFiatShamirChallengeTranscript(this.T, this.order);
+        this.T.addPoint(T1);
+        this.T.addPoint(T2);
+        this.x = Utils.getFiatShamirChallengeTranscript(this.T, this.order);
     }
 
     /**
@@ -190,7 +195,7 @@ class UncompressedBulletproof extends RangeProof {
         // Orthogonal generator B
         const B = Utils.getnewGenFromHashingGen(H);
         // Indeterminate variable w
-        const w = Utils.getFiatShamirChallenge(Utils.scalarToPoint(this.x.toString(16)), n);
+        const w = Utils.getFiatShamirChallengeTranscript(this.T, n);
         const wBN = Utils.toBN(w);
 
         const aBN = Utils.toBN(a.toScalar());
@@ -254,8 +259,10 @@ class UncompressedBulletproof extends RangeProof {
 
             const Lk = G.mul(a_lo_G_hi).add(H.mul(b_hi_H_lo)).add(Q.mul(a_lo_b_hi));
             const Rk = G.mul(a_hi_G_lo).add(H.mul(b_lo_H_hi)).add(Q.mul(a_hi_b_lo));
+            this.T.addPoint(Lk);
+            this.T.addPoint(Rk);
 
-            let uk = Utils.getFiatShamirChallenge(Utils.scalarToPoint(w.toString(16)), n);
+            let uk = Utils.getFiatShamirChallengeTranscript(this.T, n);
             const ukinv = cryptoutils.modInv(uk, n);
 
             if( doAssert ) {
