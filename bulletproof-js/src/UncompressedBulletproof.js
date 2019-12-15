@@ -130,6 +130,9 @@ class UncompressedBulletproof extends RangeProof {
     }
 
     verify(low, up) {
+        if(low !== 0n ) {
+            throw new Error("Currenlty only range proofs from 0 to n are allowed");
+        }
         // Generator H
         const H = Utils.getnewGenFromHashingGen(this.G);
 
@@ -284,6 +287,7 @@ class UncompressedBulletproof extends RangeProof {
             for ( let i = 0; i < a_lo.length(); i++ ) {
                 a_sum.addElem(a_lo.get(i) * uk + ukinv * a_hi.get(i));
                 b_sum.addElem(b_lo.get(i) * ukinv + uk * b_hi.get(i));
+
                 G_sum.addElem(G_lo.get(i) * ukinv + uk * G_hi.get(i));
                 H_sum.addElem(H_lo.get(i) * uk + ukinv * H_hi.get(i));
             }
@@ -313,6 +317,8 @@ class UncompressedBulletproof extends RangeProof {
         }
         const G0 = G_sum.get(0);
         const H0 = H_sum.get(0);
+        console.log("G0 " + G0);
+        console.log("H0 " + H0);
         const a0 = a_sum.get(0);
         const b0 = b_sum.get(0);
         const a0G0BN = Utils.toBN(Maths.mod(a0 * G0, n));

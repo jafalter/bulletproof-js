@@ -65,7 +65,6 @@ class CompressedBulletproof extends RangeProof {
         const y = this.y;
         const z = this.z;
         const x = this.x;
-        const half = up / 2n;
         console.log(`
         Challenges:
         y : ${y}
@@ -75,29 +74,29 @@ class CompressedBulletproof extends RangeProof {
 
         // Now we verify that t() is the right polynomial
         const zsq = Maths.mod(z ** 2n, this.order);
-        const y_e = BigIntVector.getVectorToPowerN( y, up, this.order );
+        const y_n = BigIntVector.getVectorToPowerN( y, up, this.order );
         const xsq = Maths.mod(x ** 2n, this.order);
 
         const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, H);
-        const rightEq = this.V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_e, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
+        const rightEq = this.V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
         if( leftEq.eq(rightEq) === false ) { return false; }
 
         // Now prove validity of lx and rx
-        const y_nege = BigIntVector.getVectorToPowerN( -y, up, this.order);
-        const H2 = y_nege.multVectorWithPointToPoint(H);
+        const y_nInv = BigIntVector.getVectorToPowerN( -y, up, this.order);
+        const H2 = y_nInv.multVectorWithPointToPoint(H);
 
-        const nege = Maths.mod(-this.e, this.order);
-        const Bnege = Utils.toBN(nege);
+        const eInv = cryptoutils.modInv(this.e, this.order);
+        const eInvBN = Utils.toBN(eInv);
         const Bx = Utils.toBN(x);
-        const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_e.length(), this.order);
-        const twos_power_e  = BigIntVector.getVectorToPowerN(2n, BigInt(y_e.length()), this.order);
-        const twos_times_zsq = twos_power_e.multWithScalar(zsq);
+        const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_n.length(), this.order);
+        const twos_power_n  = BigIntVector.getVectorToPowerN(2n, BigInt(y_n.length()), this.order);
+        const twos_times_zsq = twos_power_n.multWithScalar(zsq);
 
-        const l1 = y_e.multWithScalar(z).addVector(twos_times_zsq);
-        const l2 = vec_z.addVector(y_nege.multWithScalar(zsq).multVector(twos_power_e));
+        const l1 = y_n.multWithScalar(z).addVector(twos_times_zsq);
+        const l2 = vec_z.addVector(y_nInv.multWithScalar(zsq).multVector(twos_power_n));
 
-        const P1 = H.mul(Bnege).add(this.A).add(this.S.mul(Bx)).add(l1.multVectorWithPointToPoint(H2)).add(vec_z.multVectorWithPointToPoint(this.G).neg());
-        const P2 = H.mul(Bnege).add(this.A).add(this.S.mul(Bx)).add(l2.multVectorWithPointToPoint(H)).add(vec_z.multVectorWithPointToPoint(this.G).neg());
+        const P1 = H.mul(eInvBN).add(this.A).add(this.S.mul(Bx)).add(l1.multVectorWithPointToPoint(H2)).add(vec_z.multVectorWithPointToPoint(this.G).neg());
+        const P2 = H.mul(eInvBN).add(this.A).add(this.S.mul(Bx)).add(l2.multVectorWithPointToPoint(H)).add(vec_z.multVectorWithPointToPoint(this.G).neg());
 
         if( P1.eq(P2) === false ) { return false; }
 
@@ -115,13 +114,20 @@ class CompressedBulletproof extends RangeProof {
         const u02inv = cryptoutils.modInv(u02, this.order);
         const u02invBN = Utils.toBN(u02inv);
 
-        let s = cryptoutils.modInv(u0, this.order);
-        for( let i = 1; i < this.ind.length; i++ ) {
-            const ui = this.ind[i].u;
-            const fac = i <= up ? cryptoutils.modInv(ui, this.order) : ui;
-            s = Maths.mod(s * fac, this.order);
+        let s = 1n;
+        let i = 0;
+        let tmp = up;
+        while (tmp > 1) {
+            // TODO proper fiat shamir
+            let u = this.ind[i].u;
+            let uinv = cryptoutils.modInv(u, this.order);
+            s = Maths.mod(s * uinv + u * s, this.order);
+            tmp = tmp / 2n;
+            i++;
         }
         const sinv = cryptoutils.modInv(s, this.order);
+        console.log("s " + s);
+        console.log("sinv " + sinv);
 
         let det = L0.mul(u02BN).add(R0.mul(u02invBN));
         for( let j = 1; j < this.ind.length; j++ ) {
@@ -136,11 +142,10 @@ class CompressedBulletproof extends RangeProof {
             det = det.add(Lj.mul(uj2BN)).add(Rj.mul(uj2invBN));
         }
         const a0s = Utils.toBN(Maths.mod(this.a0 * s, this.order));
-        const b0s = Utils.toBN(Maths.mod(this.b0 * sinv, this.order));
+        const b0s = Utils.toBN(Maths.mod(this.b0 * s, this.order));
         const a0b0 = Utils.toBN(Maths.mod(this.a0 * this.b0, this.order));
         const detinv = det.neg();
-        const rightSide = this.
-        G.mul(a0s).add(H.mul(b0s)).add(this.Q.mul(a0b0)).add(detinv);
+        const rightSide = this.G.mul(a0s).add(H.mul(b0s)).add(this.Q.mul(a0b0)).add(detinv);
         return leftSide.eq(rightSide);
     }
 }
