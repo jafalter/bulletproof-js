@@ -115,7 +115,7 @@ class ProofFactory {
 
         const y = Utils.getFiatShamirChallengeTranscript(T, order);
         const y_n = BigIntVector.getVectorToPowerN( y, BigInt(a_L.length()), order );
-        const y_negn = BigIntVector.getVectorToPowerN( -y, BigInt(a_L.length()), order);
+        const y_ninv = BigIntVector.getVectorToPowerN( -y, BigInt(a_L.length()), order);
         if( doAssert ) assert(y_n.length() === a_L.length() && y_n.length() === a_R.length(), "All vectors should be same length");
 
         const z = Utils.getFiatShamirChallengeTranscript(T, order, false);
@@ -244,23 +244,26 @@ class ProofFactory {
         however this would need 2n scalars to be transmitted.
         Using the inner product prove we only need to transmit log(order) communication cost
          */
+
         if( doAssert ) {
             // transmutating the generator H such that we can verify r(x)
-            const H2 = y_negn.multVectorWithPointToPoint(H);
+            const H2 = H.mul(y_ninv.toScalar(true));
 
             // Final verification
-            const nege = Maths.mod(-e, order);
-            const Bnege = Utils.toBN(nege);
+            const E = H.mul(Utils.toBN(e));
+            const Einv = E.neg();
             const Bx = Utils.toBN(x);
             const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_n.length(), order);
 
             const l1 = y_n.multWithScalar(z).addVector(twos_times_zsq);
-            const l2 = vec_z.addVector(y_negn.multWithScalar(zsq).multVector(vec2));
+            const l2 = vec_z.addVector(y_ninv.multWithScalar(zsq).multVector(vec2));
 
-            const P1 = H.mul(Bnege).add(A).add(S.mul(Bx)).add(l1.multVectorWithPointToPoint(H2)).add(vec_z.multVectorWithPointToPoint(G).neg());
-            const P2 = H.mul(Bnege).add(A).add(S.mul(Bx)).add(l2.multVectorWithPointToPoint(H)).add(vec_z.multVectorWithPointToPoint(G).neg());
+            const P1 = Einv.add(A).add(S.mul(Bx)).add(H2.mul(l1.toScalar(true))).add(G.mul(vec_z.toScalar(true)).neg());
+            const P2 = Einv.add(A).add(S.mul(Bx)).add(H.mul(l2.toScalar(true))).add(G.mul(vec_z.toScalar(true)).neg());
+            const P = G.mul(l(x).toScalar(true)).add(H.mul(r(x).toScalar(true)));
 
             assert(P1.eq(P2), 'What the verifier checks to verify that l(x) and r(x) are correct');
+            assert(P.eq(P1));
         }
         return new UncompressedBulletproof(V, A, S, T1, T2, tx, tx_bf, e, l(x), r(x), G, order);
     }

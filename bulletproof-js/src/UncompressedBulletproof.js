@@ -164,8 +164,8 @@ class UncompressedBulletproof extends RangeProof {
         const y_nege = BigIntVector.getVectorToPowerN( -y, up, this.order);
         const H2 = y_nege.multVectorWithPointToPoint(H);
 
-        const nege = Maths.mod(-this.e, this.order);
-        const Bnege = Utils.toBN(nege);
+        const E = H.mul(Utils.toBN(e));
+        const Einv = E.neg();
         const Bx = Utils.toBN(x);
         const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_e.length(), this.order);
         const twos_power_e  = BigIntVector.getVectorToPowerN(2n, BigInt(y_e.length()), this.order);
@@ -174,8 +174,8 @@ class UncompressedBulletproof extends RangeProof {
         const l1 = y_e.multWithScalar(z).addVector(twos_times_zsq);
         const l2 = vec_z.addVector(y_nege.multWithScalar(zsq).multVector(twos_power_e));
 
-        const P1 = H.mul(Bnege).add(this.A).add(this.S.mul(Bx)).add(l1.multVectorWithPointToPoint(H2)).add(vec_z.multVectorWithPointToPoint(this.G).neg());
-        const P2 = H.mul(Bnege).add(this.A).add(this.S.mul(Bx)).add(l2.multVectorWithPointToPoint(H)).add(vec_z.multVectorWithPointToPoint(this.G).neg());
+        const P1 = Einv.add(this.A).add(this.S.mul(Bx)).add(H2.mul(l1.toScalar())).add(this.G.mul(vec_z.toScalar()).neg());
+        const P2 = Einv.add(this.A).add(this.S.mul(Bx)).add(H.mul(l2.toScalar())).add( this.G.mul(vec_z.toScalar()).neg());
 
         return P1.eq(P2);
     }
@@ -317,8 +317,6 @@ class UncompressedBulletproof extends RangeProof {
         }
         const G0 = G_sum.get(0);
         const H0 = H_sum.get(0);
-        console.log("G0 " + G0);
-        console.log("H0 " + H0);
         const a0 = a_sum.get(0);
         const b0 = b_sum.get(0);
         const a0G0BN = Utils.toBN(Maths.mod(a0 * G0, n));

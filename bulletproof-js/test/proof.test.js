@@ -20,11 +20,26 @@ describe('Tests for the rangeproof', () => {
         const n = secp256k1.n;
         const e = 64n;
         const y_n = BigIntVector.getVectorToPowerN(y, e, n);
-        const y_negn = BigIntVector.getVectorToPowerN(-y, e, n);
+        const y_inv = new BigIntVector(n);
+        for( let i = 0; i < y_n.length(); i++ ) {
+            y_inv.addElem( cryptoutils.modInv(y_n.get(i), n) );
+        }
+        assert( cryptoutils.modInv(y_n.toScalar(),n) === y_inv.toScalar() );
+        const y_nG = ec.g.mul(y_n.toScalar(true));
+        const y_nGInv = y_nG.neg();
         const P = ec.g.mul(Utils.toBN(98712398123n));
-        const Pt1 = y_n.multVectorWithPointToPoint(P);
-        const Pt2 = y_negn.multVectorWithPointToPoint(Pt1);
+        const Pt1 = P.add(y_nG);
+        const Pt2 = Pt1.add(y_nGInv);
         assert(Pt2.eq(P));
+    });
+
+    it('Test for substraction on points', () => {
+       const G = ec.g;
+       const P3 = G.mul(Utils.toBN(3n));
+       const P2 = G.mul(Utils.toBN(2n));
+       const P5 = G.mul(Utils.toBN(5n));
+       const P = P5.add(P2.neg());
+       assert(P.eq(P3));
     });
 
     it('Test additive homomorphic quality of pedersen commitments', () => {
@@ -38,6 +53,26 @@ describe('Tests for the rangeproof', () => {
 
         const c3 = Utils.getPedersenCommitment(v1 + v2, x1 + x2,);
         assert(c1.add(c2).eq(c3));
+    });
+
+    it('Test the Vector function multVectorWithPointToPoint', () => {
+       const v = new BigIntVector(secp256k1.n);
+       v.addElem(2n);
+       v.addElem(3n);
+       v.addElem(4n);
+       v.addElem(6n);
+       v.addElem(1n);
+
+       const G = ec.g;
+
+       const P1 = v.multVectorWithPointToPoint(G);
+       const P2 = G.mul(Utils.toBN(v.toScalar()));
+       const P3 = G.mul(Utils.toBN(16n));
+       const P4 = G.mul(Utils.toBN(2n)).add(G.mul(Utils.toBN(3n))).add(G.mul(Utils.toBN(4n))).add(G.mul(Utils.toBN(6n))).add(G.mul(Utils.toBN(1n)))
+
+       assert(P1.eq(P2));
+       assert(P2.eq(P3));
+       assert(P3.eq(P4));
     });
 
     it('Test modulos Function', () => {

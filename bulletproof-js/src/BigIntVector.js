@@ -213,7 +213,7 @@ class BigIntVector extends Vector {
     multVectorWithPointToPoint(G) {
         let P = G.mul(Utils.toBN(this.get(0)));
         for( let i = 1; i < this.length(); i++ ) {
-            P.add(G.mul(Utils.toBN(this.get(i))));
+            P = P.add(G.mul(Utils.toBN(this.get(i))));
         }
         return P;
     }
@@ -353,10 +353,11 @@ class BigIntVector extends Vector {
 
     /**
      * Sum upt the vector into a scalar
+     * @param bn {boolean} if we want a bn.js number returned
      *
      * @return {BigInt}
      */
-    toScalar() {
+    toScalar(bn=false) {
         let result = 0n;
         for( let i = 0; i < this.length(); i++ ) {
             if( this.mod ) {
@@ -366,7 +367,7 @@ class BigIntVector extends Vector {
                 result = result + this.get(i);
             }
         }
-        return result;
+        return bn? Utils.toBN(result) : result;
     }
 }
 
