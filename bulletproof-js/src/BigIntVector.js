@@ -2,6 +2,8 @@ const Maths = require('./Maths.js');
 const Utils = require('./Utils');
 const Vector = require('./Vector');
 
+const cryptoutils = require('bigint-crypto-utils');
+
 class BigIntVector extends Vector {
 
     /**
@@ -42,6 +44,32 @@ class BigIntVector extends Vector {
         for( let i = 0n; i < e; i++ ) {
             if( typeof  n === 'bigint' ) {
                 vec.addElem(Maths.mod(y ** i, n))
+            }
+            else {
+                vec.addElem(y ** i);
+            }
+        }
+        return vec;
+    }
+
+    /**
+     * Generate a Vector with y^order
+     * while y^e = (1,y,y^2,...,y^e-1)
+     *
+     * @param y {BigInt} initial number
+     * @param e {BigInt} the last exponent
+     * @param n {BigInt} optional number if calculations should be mod order
+     * @return {BigIntVector}
+     */
+    static getVectorToPowerMinusN(y, e, n = false) {
+        if( typeof y !== 'bigint' || typeof e !== 'bigint' ) {
+            throw new Error("Please provide y and order as bigints");
+        }
+
+        const vec = new BigIntVector(n);
+        for( let i = 0n; i < e; i++ ) {
+            if( typeof  n === 'bigint' ) {
+                vec.addElem(cryptoutils.modInv(y ** i, n));
             }
             else {
                 vec.addElem(y ** i);

@@ -115,7 +115,7 @@ class ProofFactory {
 
         const y = Utils.getFiatShamirChallengeTranscript(T, order);
         const y_n = BigIntVector.getVectorToPowerN( y, BigInt(a_L.length()), order );
-        const y_ninv = BigIntVector.getVectorToPowerN( -y, BigInt(a_L.length()), order);
+        const y_ninv = BigIntVector.getVectorToPowerMinusN( y, BigInt(a_L.length()), order);
         if( doAssert ) assert(y_n.length() === a_L.length() && y_n.length() === a_R.length(), "All vectors should be same length");
 
         const z = Utils.getFiatShamirChallengeTranscript(T, order, false);
@@ -258,9 +258,11 @@ class ProofFactory {
             const l1 = y_n.multWithScalar(z).addVector(twos_times_zsq);
             const l2 = vec_z.addVector(y_ninv.multWithScalar(zsq).multVector(vec2));
 
-            const P1 = Einv.add(A).add(S.mul(Bx)).add(H2.mul(l1.toScalar(true))).add(G.mul(vec_z.toScalar(true)).neg());
-            const P2 = Einv.add(A).add(S.mul(Bx)).add(H.mul(l2.toScalar(true))).add(G.mul(vec_z.toScalar(true)).neg());
-            const P = G.mul(l(x).toScalar(true)).add(H.mul(r(x).toScalar(true)));
+            const A = H2.mul(Utils.toBN(y_n.multWithScalar(z)));
+            const B = H.mul(Utils.toBN(vec_z));
+            //const P1 = Einv.add(A).add(S.mul(Bx)).add(H2.mul(l1.toScalar(true))).add(G.mul(vec_z.toScalar(true)).neg());
+            //const P2 = Einv.add(A).add(S.mul(Bx)).add(H.mul(l2.toScalar(true))).add(G.mul(vec_z.toScalar(true)).neg());
+            //const P = G.mul(l(x).toScalar(true)).add(H2.mul(r(x).toScalar(true)));
 
             assert(P1.eq(P2), 'What the verifier checks to verify that l(x) and r(x) are correct');
             assert(P.eq(P1));

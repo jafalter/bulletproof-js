@@ -82,7 +82,7 @@ class CompressedBulletproof extends RangeProof {
         if( leftEq.eq(rightEq) === false ) { return false; }
 
         // Now prove validity of lx and rx
-        const y_nInv = BigIntVector.getVectorToPowerN( -y, up, this.order);
+        const y_nInv = BigIntVector.getVectorToPowerMinusN( y, up, this.order);
         const H2 = y_nInv.multVectorWithPointToPoint(H);
 
         const eInv = cryptoutils.modInv(this.e, this.order);

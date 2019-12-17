@@ -161,7 +161,7 @@ class UncompressedBulletproof extends RangeProof {
         if( leftEq.eq(rightEq) === false ) { return false; }
 
         // Now prove validity of lx and rx
-        const y_nege = BigIntVector.getVectorToPowerN( -y, up, this.order);
+        const y_nege = BigIntVector.getVectorToPowerMinusN( y, up, this.order);
         const H2 = y_nege.multVectorWithPointToPoint(H);
 
         const E = H.mul(Utils.toBN(e));

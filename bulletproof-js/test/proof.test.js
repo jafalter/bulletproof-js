@@ -33,6 +33,19 @@ describe('Tests for the rangeproof', () => {
         assert(Pt2.eq(P));
     });
 
+    it('Test for H', () => {
+        const G = ec.g;
+        const vecy = new BigIntVector(secp256k1.n);
+        vecy.addElem(2n);
+        vecy.addElem(3n);
+        const vecz = new BigIntVector(secp256k1.n);
+        vecz.addElem(cryptoutils.modInv(2n, secp256k1.n));
+        vecz.addElem(cryptoutils.modInv(3n, secp256k1.n));
+        const G2 = G.mul(vecz.toScalar(true));
+        const G3 = G2.mul(vecy.toScalar(true));
+        G3.eq(G.mul(Utils.toBN(2n)));
+    });
+
     it('Test for substraction on points', () => {
        const G = ec.g;
        const P3 = G.mul(Utils.toBN(3n));
@@ -74,6 +87,8 @@ describe('Tests for the rangeproof', () => {
        assert(P2.eq(P3));
        assert(P3.eq(P4));
     });
+
+
 
     it('Test modulos Function', () => {
        const a = 1512312512n;
