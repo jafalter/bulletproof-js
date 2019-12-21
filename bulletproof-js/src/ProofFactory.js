@@ -2,6 +2,7 @@ const assert = require('assert');
 
 const Utils = require('./Utils');
 const Transcript = require('./Transcript');
+const PointVector = require('./PointVector');
 const BigIntVector = require('./BigIntVector');
 const Maths = require('./Maths');
 const UncompressedBulletproof = require('./UncompressedBulletproof');
@@ -247,7 +248,9 @@ class ProofFactory {
 
         if( doAssert ) {
             // transmutating the generator H such that we can verify r(x)
-            const H2 = H.mul(y_ninv.toScalar(true));
+            const vecH = PointVector.getVectorOfPoint(H, y_n.length());
+            const vecG = PointVector.getVectorOfPoint(G, y_n.length());
+            const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
             // Final verification
             const E = H.mul(Utils.toBN(e));
@@ -258,11 +261,12 @@ class ProofFactory {
             const l1 = y_n.multWithScalar(z).addVector(twos_times_zsq);
             const l2 = vec_z.addVector(y_ninv.multWithScalar(zsq).multVector(vec2));
 
-            const A = H2.mul(Utils.toBN(y_n.multWithScalar(z)));
-            const B = H.mul(Utils.toBN(vec_z));
-            //const P1 = Einv.add(A).add(S.mul(Bx)).add(H2.mul(l1.toScalar(true))).add(G.mul(vec_z.toScalar(true)).neg());
-            //const P2 = Einv.add(A).add(S.mul(Bx)).add(H.mul(l2.toScalar(true))).add(G.mul(vec_z.toScalar(true)).neg());
-            //const P = G.mul(l(x).toScalar(true)).add(H2.mul(r(x).toScalar(true)));
+            //const A = vecH2.multWithBigIntVector(y_n.multVector(vec_z));
+            //const B = vecH.multWithBigIntVector(vec_z);
+
+            const P1 = Einv.add(A).add(S.mul(Bx)).add(vecH2.multWithBigIntVector(l1).toSinglePoint()).add(vecG.multWithBigIntVector(vec_z).toSinglePoint().neg());
+            const P2 = Einv.add(A).add(S.mul(Bx)).add(vecH.multWithBigIntVector(l2).toSinglePoint()).add(vecG.multWithBigIntVector(vec_z).toSinglePoint().neg());
+            const P = vecG.multWithBigIntVector(l(x)).addPointVector(vecH2.multWithBigIntVector(r(x))).toSinglePoint();
 
             assert(P1.eq(P2), 'What the verifier checks to verify that l(x) and r(x) are correct');
             assert(P.eq(P1));

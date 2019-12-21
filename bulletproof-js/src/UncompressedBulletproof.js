@@ -3,6 +3,7 @@ const assert = require('assert');
 const cryptoutils = require('bigint-crypto-utils');
 
 const RangeProof = require('./RangeProof');
+const PointVector = require('./PointVector');
 const Utils = require('./Utils');
 const BigIntVector = require('./BigIntVector');
 const Maths = require('./Maths');
@@ -131,9 +132,10 @@ class UncompressedBulletproof extends RangeProof {
 
     verify(low, up) {
         if(low !== 0n ) {
-            throw new Error("Currenlty only range proofs from 0 to n are allowed");
+            throw new Error("Currently only range proofs from 0 to n are allowed");
         }
         // Generator H
+        const G = this.G;
         const H = Utils.getnewGenFromHashingGen(this.G);
 
         // First we calculate the challenges y, z, x by using Fiat Shamir
@@ -153,31 +155,35 @@ class UncompressedBulletproof extends RangeProof {
 
         // Now we verify that t() is the right polynomial
         const zsq = Maths.mod(z ** 2n, this.order);
-        const y_e = BigIntVector.getVectorToPowerN( y, up, this.order );
+        const y_n = BigIntVector.getVectorToPowerN( y, up, this.order );
         const xsq = Maths.mod(x ** 2n, this.order);
 
         const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, H);
-        const rightEq = this.V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_e, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
+        const rightEq = this.V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
         if( leftEq.eq(rightEq) === false ) { return false; }
 
         // Now prove validity of lx and rx
-        const y_nege = BigIntVector.getVectorToPowerMinusN( y, up, this.order);
-        const H2 = y_nege.multVectorWithPointToPoint(H);
+        const y_ninv = BigIntVector.getVectorToPowerMinusN( y, up, this.order);
+        const vecH = PointVector.getVectorOfPoint(H, up);
+        const vecG = PointVector.getVectorOfPoint(G, up);
+        const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
-        const E = H.mul(Utils.toBN(e));
+        const E = H.mul(Utils.toBN(this.e));
         const Einv = E.neg();
         const Bx = Utils.toBN(x);
-        const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_e.length(), this.order);
-        const twos_power_e  = BigIntVector.getVectorToPowerN(2n, BigInt(y_e.length()), this.order);
-        const twos_times_zsq = twos_power_e.multWithScalar(zsq);
+        const vec_z = BigIntVector.getVectorWithOnlyScalar(z, up, this.order);
 
-        const l1 = y_e.multWithScalar(z).addVector(twos_times_zsq);
-        const l2 = vec_z.addVector(y_nege.multWithScalar(zsq).multVector(twos_power_e));
+        const two_n  = BigIntVector.getVectorToPowerN(2n, BigInt(y_n.length()), this.order);
+        const twos_times_zsq = two_n.multWithScalar(zsq);
 
-        const P1 = Einv.add(this.A).add(this.S.mul(Bx)).add(H2.mul(l1.toScalar())).add(this.G.mul(vec_z.toScalar()).neg());
-        const P2 = Einv.add(this.A).add(this.S.mul(Bx)).add(H.mul(l2.toScalar())).add( this.G.mul(vec_z.toScalar()).neg());
+        const l1 = y_n.multWithScalar(z).addVector(twos_times_zsq);
+        const l2 = vec_z.addVector(y_ninv.multWithScalar(zsq).multVector(two_n));
 
-        return P1.eq(P2);
+        const P1 = Einv.add(this.A).add(this.S.mul(Bx)).add(vecH2.multWithBigIntVector(l1).toSinglePoint()).add(vecG.multWithBigIntVector(vec_z).toSinglePoint().neg());
+        const P2 = Einv.add(this.A).add(this.S.mul(Bx)).add(vecH.multWithBigIntVector(l2).toSinglePoint()).add(vecG.multWithBigIntVector(vec_z).toSinglePoint().neg());
+        const P = vecG.multWithBigIntVector(this.lx).addPointVector(vecH2.multWithBigIntVector(this.rx)).toSinglePoint();
+
+        return P1.eq(P2) && P2.eq(P);
     }
 
     /**

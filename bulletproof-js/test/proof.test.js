@@ -5,6 +5,7 @@ const path = require('path');
 const cryptoutils = require('bigint-crypto-utils');
 
 const Factory = require('../src/ProofFactory');
+const PointVector = require('../src/PointVector');
 const UncompressedBulletproof = require('../src/UncompressedBulletproof');
 const Utils = require('../src/Utils');
 const Maths = require('../src/Maths');
@@ -15,35 +16,20 @@ const ec = new EC('secp256k1');
 
 describe('Tests for the rangeproof', () => {
 
-    it('Test for exponent vectors', () => {
-        const y = 897109873401987290187239812793n;
-        const n = secp256k1.n;
-        const e = 64n;
-        const y_n = BigIntVector.getVectorToPowerN(y, e, n);
-        const y_inv = new BigIntVector(n);
-        for( let i = 0; i < y_n.length(); i++ ) {
-            y_inv.addElem( cryptoutils.modInv(y_n.get(i), n) );
-        }
-        assert( cryptoutils.modInv(y_n.toScalar(),n) === y_inv.toScalar() );
-        const y_nG = ec.g.mul(y_n.toScalar(true));
-        const y_nGInv = y_nG.neg();
-        const P = ec.g.mul(Utils.toBN(98712398123n));
-        const Pt1 = P.add(y_nG);
-        const Pt2 = Pt1.add(y_nGInv);
-        assert(Pt2.eq(P));
-    });
-
-    it('Test for H', () => {
+    it('Test for transmutated generator', () => {
         const G = ec.g;
-        const vecy = new BigIntVector(secp256k1.n);
-        vecy.addElem(2n);
-        vecy.addElem(3n);
-        const vecz = new BigIntVector(secp256k1.n);
-        vecz.addElem(cryptoutils.modInv(2n, secp256k1.n));
-        vecz.addElem(cryptoutils.modInv(3n, secp256k1.n));
-        const G2 = G.mul(vecz.toScalar(true));
-        const G3 = G2.mul(vecy.toScalar(true));
-        G3.eq(G.mul(Utils.toBN(2n)));
+        const vec = new BigIntVector(secp256k1.n);
+        vec.addElem(2n);
+        vec.addElem(3n);
+        const vecInv = new BigIntVector(secp256k1.n);
+        vecInv.addElem(cryptoutils.modInv(2n, secp256k1.n));
+        vecInv.addElem(cryptoutils.modInv(3n, secp256k1.n));
+        const vecG = PointVector.getVectorOfPoint(G, 2);
+
+        const vecG2 = vecG.multWithBigIntVector(vecInv);
+        const vecG3 = vecG2.multWithBigIntVector(vec);
+        assert(G.eq(vecG3.get(0)));
+        assert(G.eq(vecG3.get(1)));
     });
 
     it('Test for substraction on points', () => {
