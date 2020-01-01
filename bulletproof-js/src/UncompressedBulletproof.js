@@ -200,6 +200,12 @@ class UncompressedBulletproof extends RangeProof {
 
         const a = this.lx.clone();
         const b = this.rx.clone();
+        const len = a.length();
+
+        const vecG = PointVector.getVectorOfPoint(G, len);
+        const vecH = PointVector.getVectorOfPoint(H, len);
+        const y_ninv = BigIntVector.getVectorToPowerMinusN(this.y, BigInt(len), n);
+        const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
         // Orthogonal generator B
         const B = Utils.getnewGenFromHashingGen(H);
@@ -209,7 +215,7 @@ class UncompressedBulletproof extends RangeProof {
 
         const aBN = Utils.toBN(a.toScalar());
         const bBN = Utils.toBN(b.toScalar());
-        const P = G.mul(aBN).add(H.mul(bBN));
+        const P = vecG.multWithBigIntVector(a).toSinglePoint().add(vecH2.multWithBigIntVector(b).toSinglePoint());
         const c = a.multVectorToScalar(b);
         const cBN = Utils.toBN(c);
         const Q = B.mul(wBN);
@@ -217,11 +223,10 @@ class UncompressedBulletproof extends RangeProof {
         /* Now we need k iterations to half the vectors
            until we arrive at single element vectors
         */
-        const len = a.length();
         let a_sum = a.clone();
         let b_sum = b.clone();
-        let G_sum = BigIntVector.getVectorWithOnlyScalar(1n, len, n);
-        let H_sum = BigIntVector.getVectorWithOnlyScalar(1n, len, n);
+        let G_sum = vecG.clone();
+        let H_sum = vecH2.clone();
 
         const intermediateTerms = [];
         let first = true;
@@ -229,13 +234,13 @@ class UncompressedBulletproof extends RangeProof {
         while (a_sum.length() > 1) {
             const a_lo = new BigIntVector(n);
             const b_lo = new BigIntVector(n);
-            const G_lo = new BigIntVector(n);
-            const H_lo = new BigIntVector(n);
+            const G_lo = new PointVector();
+            const H_lo = new PointVector();
 
             const a_hi = new BigIntVector(n);
             const b_hi = new BigIntVector(n);
-            const G_hi = new BigIntVector(n);
-            const H_hi = new BigIntVector(n);
+            const G_hi = new PointVector();
+            const H_hi = new PointVector();
 
             const half = a_sum.length() / 2;
             for( let i = 0; i < a_sum.length(); i++ ) {
@@ -259,20 +264,22 @@ class UncompressedBulletproof extends RangeProof {
                 assert(H_lo.length() === H_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
             }
             // Before we get challenge u_k we commit to L_k and R_k
-            const a_lo_G_hi = Utils.toBN(a_lo.multVectorToScalar(G_hi));
-            const b_hi_H_lo = Utils.toBN(b_hi.multVectorToScalar(H_lo));
+            //const a_lo_G_hi = Utils.toBN(a_lo.multVectorToScalar(G_hi));
+            //onst b_hi_H_lo = Utils.toBN(b_hi.multVectorToScalar(H_lo));
             const a_lo_b_hi = Utils.toBN(a_lo.multVectorToScalar(b_hi));
-            const a_hi_G_lo = Utils.toBN(a_hi.multVectorToScalar(G_lo));
-            const b_lo_H_hi = Utils.toBN(b_lo.multVectorToScalar(H_hi));
+            //const a_hi_G_lo = Utils.toBN(a_hi.multVectorToScalar(G_lo));
+            //const b_lo_H_hi = Utils.toBN(b_lo.multVectorToScalar(H_hi));
             const a_hi_b_lo = Utils.toBN(a_hi.multVectorToScalar(b_lo));
 
-            const Lk = G.mul(a_lo_G_hi).add(H.mul(b_hi_H_lo)).add(Q.mul(a_lo_b_hi));
-            const Rk = G.mul(a_hi_G_lo).add(H.mul(b_lo_H_hi)).add(Q.mul(a_hi_b_lo));
+            const Lk = G_hi.multWithBigIntVector(a_lo).toSinglePoint().add(H_lo.multWithBigIntVector(b_hi).toSinglePoint()).add(Q.mul(a_lo_b_hi));
+            const Rk = G_lo.multWithBigIntVector(a_hi).toSinglePoint().add(H_hi.multWithBigIntVector(b_lo).toSinglePoint()).add(Q.mul(a_hi_b_lo));
             this.T.addPoint(Lk);
             this.T.addPoint(Rk);
 
             let uk = Utils.getFiatShamirChallengeTranscript(this.T, n);
             const ukinv = cryptoutils.modInv(uk, n);
+            let ukBN = Utils.toBN(uk);
+            const ukinvBN = Utils.toBN(ukinv);
 
             if( doAssert ) {
                 assert(Maths.mod(uk * ukinv, n) === 1n);
@@ -288,22 +295,23 @@ class UncompressedBulletproof extends RangeProof {
             // Now we add up the vectors seperated by u_k
             a_sum = new BigIntVector(n);
             b_sum = new BigIntVector(n);
-            G_sum = new BigIntVector(n);
-            H_sum = new BigIntVector(n);
+            G_sum = new PointVector();
+            H_sum = new PointVector();
             for ( let i = 0; i < a_lo.length(); i++ ) {
                 a_sum.addElem(a_lo.get(i) * uk + ukinv * a_hi.get(i));
                 b_sum.addElem(b_lo.get(i) * ukinv + uk * b_hi.get(i));
 
-                G_sum.addElem(G_lo.get(i) * ukinv + uk * G_hi.get(i));
-                H_sum.addElem(H_lo.get(i) * uk + ukinv * H_hi.get(i));
+                G_sum.addElem( G_lo.get(i).mul(ukinvBN).add(G_hi.get(i).mul(ukBN)) );
+                H_sum.addElem( H_lo.get(i).mul(ukBN).add(H_hi.get(i).mul(ukinvBN)) );
             }
 
             if( doAssert && first ) {
                 const P_star = P.add(Q.mul(cBN));
-                const a_sum_G_sum = Utils.toBN(a_sum.multVectorToScalar(G_sum));
-                const b_sum_H_sum = Utils.toBN(b_sum.multVectorToScalar(H_sum));
+
+                //const a_sum_G_sum = Utils.toBN(a_sum.multVectorToScalar(G_sum));
+                //const b_sum_H_sum = Utils.toBN(b_sum.multVectorToScalar(H_sum));
                 const a_sum_b_sum = Utils.toBN(a_sum.multVectorToScalar(b_sum));
-                const Pk = G.mul(a_sum_G_sum).add(H.mul(b_sum_H_sum)).add(Q.mul(a_sum_b_sum));
+                const Pk = G_sum.multWithBigIntVector(a_sum).toSinglePoint().add(H_sum.multWithBigIntVector(b_sum).toSinglePoint()).add(Q.mul(a_sum_b_sum));
                 const Lj = intermediateTerms[0].L;
                 const Rj = intermediateTerms[0].R;
                 const uj2 = Maths.mod(uk ** 2n, n);
@@ -325,8 +333,10 @@ class UncompressedBulletproof extends RangeProof {
         const H0 = H_sum.get(0);
         const a0 = a_sum.get(0);
         const b0 = b_sum.get(0);
-        const a0G0BN = Utils.toBN(Maths.mod(a0 * G0, n));
-        const b0H0BN = Utils.toBN(Maths.mod(b0 * H0, n));
+        const a0BN = Utils.toBN(a0);
+        const b0BN = Utils.toBN(b0);
+        //const a0G0BN = Utils.toBN(Maths.mod(a0 * G0, n));
+        //const b0H0BN = Utils.toBN(Maths.mod(b0 * H0, n));
         const c0 = Maths.mod(a0 * b0, n);
         const c0BN = Utils.toBN(c0);
         if( doAssert ) {
@@ -353,7 +363,7 @@ class UncompressedBulletproof extends RangeProof {
             }
             const detinv = det.neg();
 
-            const P0 = G.mul(a0G0BN).add(H.mul(b0H0BN)).add(Q.mul(c0BN));
+            const P0 =  G0.mul(a0BN).add(H0.mul(b0BN)).add(Q.mul(c0BN));
             assert(P_star.eq(P0.add(detinv)), 'What the verifier will check');
         }
         return new CompressedBulletproof(

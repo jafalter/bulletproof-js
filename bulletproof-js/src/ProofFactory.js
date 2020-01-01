@@ -261,9 +261,6 @@ class ProofFactory {
             const l1 = y_n.multWithScalar(z).addVector(twos_times_zsq);
             const l2 = vec_z.addVector(y_ninv.multWithScalar(zsq).multVector(vec2));
 
-            //const A = vecH2.multWithBigIntVector(y_n.multVector(vec_z));
-            //const B = vecH.multWithBigIntVector(vec_z);
-
             const P1 = Einv.add(A).add(S.mul(Bx)).add(vecH2.multWithBigIntVector(l1).toSinglePoint()).add(vecG.multWithBigIntVector(vec_z).toSinglePoint().neg());
             const P2 = Einv.add(A).add(S.mul(Bx)).add(vecH.multWithBigIntVector(l2).toSinglePoint()).add(vecG.multWithBigIntVector(vec_z).toSinglePoint().neg());
             const P = vecG.multWithBigIntVector(l(x)).addPointVector(vecH2.multWithBigIntVector(r(x))).toSinglePoint();
