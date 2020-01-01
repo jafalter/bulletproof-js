@@ -1,6 +1,7 @@
 const cryptoutils = require('bigint-crypto-utils');
 
 const RangeProof = require('./RangeProof');
+const PointVector = require('./PointVector');
 const Transcript = require('./Transcript');
 const Utils = require('./Utils');
 const Maths = require('./Maths');
@@ -82,21 +83,25 @@ class CompressedBulletproof extends RangeProof {
         if( leftEq.eq(rightEq) === false ) { return false; }
 
         // Now prove validity of lx and rx
-        const y_nInv = BigIntVector.getVectorToPowerMinusN( y, up, this.order);
-        const H2 = y_nInv.multVectorWithPointToPoint(H);
+        // Now prove validity of lx and rx
+        const y_ninv = BigIntVector.getVectorToPowerMinusN( y, up, this.order);
+        const vecH = PointVector.getVectorOfPoint(H, up);
+        const vecG = PointVector.getVectorOfPoint(this.G, up);
+        const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
-        const eInv = cryptoutils.modInv(this.e, this.order);
-        const eInvBN = Utils.toBN(eInv);
+        const E = H.mul(Utils.toBN(this.e));
+        const Einv = E.neg();
         const Bx = Utils.toBN(x);
-        const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_n.length(), this.order);
-        const twos_power_n  = BigIntVector.getVectorToPowerN(2n, BigInt(y_n.length()), this.order);
-        const twos_times_zsq = twos_power_n.multWithScalar(zsq);
+        const vec_z = BigIntVector.getVectorWithOnlyScalar(z, up, this.order);
+
+        const two_n  = BigIntVector.getVectorToPowerN(2n, BigInt(y_n.length()), this.order);
+        const twos_times_zsq = two_n.multWithScalar(zsq);
 
         const l1 = y_n.multWithScalar(z).addVector(twos_times_zsq);
-        const l2 = vec_z.addVector(y_nInv.multWithScalar(zsq).multVector(twos_power_n));
+        const l2 = vec_z.addVector(y_ninv.multWithScalar(zsq).multVector(two_n));
 
-        const P1 = H.mul(eInvBN).add(this.A).add(this.S.mul(Bx)).add(l1.multVectorWithPointToPoint(H2)).add(vec_z.multVectorWithPointToPoint(this.G).neg());
-        const P2 = H.mul(eInvBN).add(this.A).add(this.S.mul(Bx)).add(l2.multVectorWithPointToPoint(H)).add(vec_z.multVectorWithPointToPoint(this.G).neg());
+        const P1 = Einv.add(this.A).add(this.S.mul(Bx)).add(vecH2.multWithBigIntVector(l1).toSinglePoint()).add(vecG.multWithBigIntVector(vec_z).toSinglePoint().neg());
+        const P2 = Einv.add(this.A).add(this.S.mul(Bx)).add(vecH.multWithBigIntVector(l2).toSinglePoint()).add(vecG.multWithBigIntVector(vec_z).toSinglePoint().neg());
 
         if( P1.eq(P2) === false ) { return false; }
 
@@ -114,20 +119,43 @@ class CompressedBulletproof extends RangeProof {
         const u02inv = cryptoutils.modInv(u02, this.order);
         const u02invBN = Utils.toBN(u02inv);
 
-        let s = 1n;
+        // Calculate G0 and H0
+        let Gsum = vecG.clone();
+        let Hsum = vecH2.clone();
         let i = 0;
-        let tmp = up;
-        while (tmp > 1) {
+        while (Gsum.length() > 1) {
+            const Ghi = new PointVector();
+            const Glo = new PointVector();
+            const Hhi = new PointVector();
+            const Hlo = new PointVector();
+
+            const half = Gsum.length() / 2;
+            for( let j = 0; j < Gsum.length(); j++ ) {
+                if( j < half ) {
+                    Glo.addElem(Gsum.get(j));
+                    Hlo.addElem(Hsum.get(j));
+                }
+                else {
+                    Ghi.addElem(Gsum.get(j));
+                    Hhi.addElem(Hsum.get(j));
+                }
+            }
+
+            Gsum = new PointVector();
+            Hsum = new PointVector();
+
             // TODO proper fiat shamir
-            let u = this.ind[i].u;
-            let uinv = cryptoutils.modInv(u, this.order);
-            s = Maths.mod(s * uinv + u * s, this.order);
-            tmp = tmp / 2n;
+            const u = this.ind[i].u;
+            const uinv = cryptoutils.modInv(u, this.order);
+            const uBN = Utils.toBN(u);
+            const uinvBN = Utils.toBN(uinv);
+
+            for( let j = 0; j < Glo.length(); j++ ) {
+                Gsum.addElem(Glo.get(j).mul(uinvBN).add(Ghi.get(j).mul(uBN)));
+                Hsum.addElem(Hlo.get(j).mul(uBN).add(Hhi.get(j).mul(uinvBN)));
+            }
             i++;
         }
-        const sinv = cryptoutils.modInv(s, this.order);
-        console.log("s " + s);
-        console.log("sinv " + sinv);
 
         let det = L0.mul(u02BN).add(R0.mul(u02invBN));
         for( let j = 1; j < this.ind.length; j++ ) {
@@ -141,11 +169,14 @@ class CompressedBulletproof extends RangeProof {
             const uj2invBN = Utils.toBN(uj2inv);
             det = det.add(Lj.mul(uj2BN)).add(Rj.mul(uj2invBN));
         }
-        const a0s = Utils.toBN(Maths.mod(this.a0 * s, this.order));
-        const b0s = Utils.toBN(Maths.mod(this.b0 * s, this.order));
-        const a0b0 = Utils.toBN(Maths.mod(this.a0 * this.b0, this.order));
+        const G0 = Gsum.get(0);
+        const H0 = Hsum.get(0);
+        const a0BN = Utils.toBN(this.a0);
+        const b0BN = Utils.toBN(this.b0);
+        const a0b0BN = Utils.toBN(Maths.mod(this.a0 * this.b0, this.order));
+
         const detinv = det.neg();
-        const rightSide = this.G.mul(a0s).add(H.mul(b0s)).add(this.Q.mul(a0b0)).add(detinv);
+        const rightSide = G0.mul(a0BN).add(H0.mul(b0BN)).add(this.Q.mul(a0b0BN)).add(detinv);
         return leftSide.eq(rightSide);
     }
 }

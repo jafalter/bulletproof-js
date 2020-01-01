@@ -213,8 +213,6 @@ class UncompressedBulletproof extends RangeProof {
         const w = Utils.getFiatShamirChallengeTranscript(this.T, n);
         const wBN = Utils.toBN(w);
 
-        const aBN = Utils.toBN(a.toScalar());
-        const bBN = Utils.toBN(b.toScalar());
         const P = vecG.multWithBigIntVector(a).toSinglePoint().add(vecH2.multWithBigIntVector(b).toSinglePoint());
         const c = a.multVectorToScalar(b);
         const cBN = Utils.toBN(c);
@@ -264,11 +262,7 @@ class UncompressedBulletproof extends RangeProof {
                 assert(H_lo.length() === H_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
             }
             // Before we get challenge u_k we commit to L_k and R_k
-            //const a_lo_G_hi = Utils.toBN(a_lo.multVectorToScalar(G_hi));
-            //onst b_hi_H_lo = Utils.toBN(b_hi.multVectorToScalar(H_lo));
             const a_lo_b_hi = Utils.toBN(a_lo.multVectorToScalar(b_hi));
-            //const a_hi_G_lo = Utils.toBN(a_hi.multVectorToScalar(G_lo));
-            //const b_lo_H_hi = Utils.toBN(b_lo.multVectorToScalar(H_hi));
             const a_hi_b_lo = Utils.toBN(a_hi.multVectorToScalar(b_lo));
 
             const Lk = G_hi.multWithBigIntVector(a_lo).toSinglePoint().add(H_lo.multWithBigIntVector(b_hi).toSinglePoint()).add(Q.mul(a_lo_b_hi));
@@ -308,8 +302,6 @@ class UncompressedBulletproof extends RangeProof {
             if( doAssert && first ) {
                 const P_star = P.add(Q.mul(cBN));
 
-                //const a_sum_G_sum = Utils.toBN(a_sum.multVectorToScalar(G_sum));
-                //const b_sum_H_sum = Utils.toBN(b_sum.multVectorToScalar(H_sum));
                 const a_sum_b_sum = Utils.toBN(a_sum.multVectorToScalar(b_sum));
                 const Pk = G_sum.multWithBigIntVector(a_sum).toSinglePoint().add(H_sum.multWithBigIntVector(b_sum).toSinglePoint()).add(Q.mul(a_sum_b_sum));
                 const Lj = intermediateTerms[0].L;
@@ -335,8 +327,6 @@ class UncompressedBulletproof extends RangeProof {
         const b0 = b_sum.get(0);
         const a0BN = Utils.toBN(a0);
         const b0BN = Utils.toBN(b0);
-        //const a0G0BN = Utils.toBN(Maths.mod(a0 * G0, n));
-        //const b0H0BN = Utils.toBN(Maths.mod(b0 * H0, n));
         const c0 = Maths.mod(a0 * b0, n);
         const c0BN = Utils.toBN(c0);
         if( doAssert ) {

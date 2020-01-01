@@ -62,6 +62,21 @@ class PointVector extends Vector {
     }
 
     /**
+     * Multiply every point of the vector with
+     * a single scalar BigInt
+     *
+     * @param sc {BigInt}
+     * @return {PointVector}
+     */
+    multWithSingleScalar(sc) {
+        const newVec = new PointVector();
+        for(let i = 0; i < this.length(); i++) {
+            newVec.addElem( this.get(i).mul(Utils.toBN(sc)) );
+        }
+        return newVec;
+    }
+
+    /**
      * @return {Point}
      */
     toSinglePoint() {
