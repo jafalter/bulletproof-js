@@ -26,7 +26,7 @@ class ProofFactory {
      * @param order {BigInt} Order of the group. All calculations will be mod order
      * @param doAssert {boolean} if we should do asserts. Should be set to false in production for performance gains
      * @param randomNum {boolean|function} optional random bigint generating function
-     * @return {RangeProof} Final rangeproof which can be verified
+     * @return {UncompressedBulletproof} Final rangeproof which can be verified
      */
     static computeBulletproof(v, bf, V, G, H, lowBound, upBound, order, doAssert=true, randomNum=false) {
 
