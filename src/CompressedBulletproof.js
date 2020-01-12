@@ -73,12 +73,6 @@ class CompressedBulletproof extends RangeProof {
         const y = this.y;
         const z = this.z;
         const x = this.x;
-        console.log(`
-        Challenges:
-        y : ${y}
-        z : ${z}
-        x : ${x}
-        `);
 
         // Now we verify that t() is the right polynomial
         const zsq = Maths.mod(z ** 2n, this.order);
