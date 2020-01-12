@@ -4,6 +4,14 @@ class Transcript {
         this.points = [];
     }
 
+    clone() {
+        const t = new Transcript();
+        for(let p of this.points) {
+            t.addPoint(p);
+        }
+        return t;
+    }
+
     /**
      * @param p {Point}
      */

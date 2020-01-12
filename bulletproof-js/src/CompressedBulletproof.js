@@ -23,11 +23,10 @@ class CompressedBulletproof extends RangeProof {
      * @param a0 {BigInt} The single element in a after compressing the lx vector
      * @param b0 {BigInt} The single element in b after compressing the rx vector
      * @param ind {{ L : Point, R : Point}[]} indeterminante variables
-     * @param Q {Point} orthogonal Generator multiplied with indeterminate variable w
      * @param G {Point} Generator
      * @param order {BigInt} curve order
      */
-    constructor(V, A, S, T1, T2, tx, txbf, e, a0, b0, ind, Q, G, order) {
+    constructor(V, A, S, T1, T2, tx, txbf, e, a0, b0, ind,G, order) {
         super();
         this.V = V;
         this.A = A;
@@ -40,7 +39,6 @@ class CompressedBulletproof extends RangeProof {
         this.a0 = a0;
         this.b0 = b0;
         this.ind = ind;
-        this.Q = Q;
         this.G = G;
         this.order = order;
 
@@ -62,6 +60,15 @@ class CompressedBulletproof extends RangeProof {
         }
         // Generator H
         const H = Utils.getnewGenFromHashingGen(this.G);
+
+        const T1 = this.T.clone();
+
+        // Orthogonal generator B
+        const B = Utils.getnewGenFromHashingGen(H);
+        // Indeterminate variable w
+        const w = Utils.getFiatShamirChallengeTranscript(T1, this.order);
+        const wBN = Utils.toBN(w);
+        const Q = B.mul(wBN);
 
         const y = this.y;
         const z = this.z;
@@ -110,7 +117,14 @@ class CompressedBulletproof extends RangeProof {
         const c = this.tx;
         const cBN = Utils.toBN(c);
 
-        const leftSide = P.add(this.Q.mul(cBN));
+        // Get challenges u_k via Fiat Shamir
+        for( let i = 0; i < this.ind.length; i++ ) {
+            T1.addPoint(this.ind[i].L);
+            T1.addPoint(this.ind[i].R);
+            this.ind[i].u = Utils.getFiatShamirChallengeTranscript(T1, this.order);
+        }
+
+        const leftSide = P.add(Q.mul(cBN));
         const L0 = this.ind[0].L;
         const R0 = this.ind[0].R;
         const u0 = this.ind[0].u;
@@ -144,7 +158,6 @@ class CompressedBulletproof extends RangeProof {
             Gsum = new PointVector();
             Hsum = new PointVector();
 
-            // TODO proper fiat shamir
             const u = this.ind[i].u;
             const uinv = cryptoutils.modInv(u, this.order);
             const uBN = Utils.toBN(u);
@@ -161,7 +174,6 @@ class CompressedBulletproof extends RangeProof {
         for( let j = 1; j < this.ind.length; j++ ) {
             const Lj = this.ind[j].L;
             const Rj = this.ind[j].R;
-            // TODO proper Fiat Shamir
             const uj = this.ind[j].u;
             const uj2 = Maths.mod(uj ** 2n, this.order);
             const uj2BN = Utils.toBN(uj2);
@@ -176,7 +188,7 @@ class CompressedBulletproof extends RangeProof {
         const a0b0BN = Utils.toBN(Maths.mod(this.a0 * this.b0, this.order));
 
         const detinv = det.neg();
-        const rightSide = G0.mul(a0BN).add(H0.mul(b0BN)).add(this.Q.mul(a0b0BN)).add(detinv);
+        const rightSide = G0.mul(a0BN).add(H0.mul(b0BN)).add(Q.mul(a0b0BN)).add(detinv);
         return leftSide.eq(rightSide);
     }
 }

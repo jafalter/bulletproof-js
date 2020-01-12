@@ -356,6 +356,11 @@ class UncompressedBulletproof extends RangeProof {
             const P0 =  G0.mul(a0BN).add(H0.mul(b0BN)).add(Q.mul(c0BN));
             assert(P_star.eq(P0.add(detinv)), 'What the verifier will check');
         }
+        // Remove the u's from the intermediate Terms. Verifier will calculate themself
+        for( let int of intermediateTerms) {
+            delete int['u'];
+        }
+
         return new CompressedBulletproof(
             this.V,
             this.A,
@@ -368,7 +373,6 @@ class UncompressedBulletproof extends RangeProof {
             a0,
             b0,
             intermediateTerms,
-            Q,
             G,
             n
         );

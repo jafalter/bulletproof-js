@@ -12,6 +12,8 @@ const Maths = require('../src/Maths');
 const BigIntVector = require('../src/BigIntVector');
 const secp256k1 = require('../src/Constants').secp256k1;
 
+const testTimeout = 10000;
+
 const ec = new EC('secp256k1');
 
 describe('Tests for the rangeproof', () => {
@@ -143,7 +145,7 @@ describe('Tests for the rangeproof', () => {
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
         assert(prf.verify(0n, 64n));
-    }).timeout(5000);
+    }).timeout(testTimeout);
 
     it('Should create an uncompressed Bulletproof serialize and deserialize correctly', () => {
         const x = 1897278917812981289198n;
@@ -159,14 +161,14 @@ describe('Tests for the rangeproof', () => {
         const ser = prf.toJson();
         const des = UncompressedBulletproof.fromJsonString(ser);
         des.equals(ser);
-    }).timeout(5000);
+    }).timeout(testTimeout);
 
     it('Should compress the UncompressedBulletproof into a compressed one, which should verify', () => {
         const serProof = fs.readFileSync(path.join(__dirname, 'fixtures') + '/uncompressed_proof.json', 'utf-8');
         const prf = UncompressedBulletproof.fromJsonString(serProof);
         const compr = prf.compressProof(true);
         assert(compr.verify(0n, 64n));
-    }).timeout(5000);
+    }).timeout(testTimeout);
 
     it('Should test the basis of the inner product compression', () => {
         // Setup
