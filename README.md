@@ -18,6 +18,17 @@ Contribution and code reviews are always welcome.  Current TODOs:
 If you are looking for a highly efficient implementation, this library might not be for you. 
 Implementations in Rust or C will always be much more efficient than a Javascript implementation. 
 Also, I focused on readable code over performance. For instance, Javascript BigInt is used for all computations, 
-slowing down the code, but also making it easier to understand and write.
+slowing down the code, but also making it easier to understand and write. Furthermore there are some opitmizations on the
+verifier side which I couldn't get to work yet, which is why verification is much slower compared to other
+libraries then proof creation.
+
+Here are the measurements I took from an Intel Core i5-4690 3.5GHz on NodeJS 12. You can do them yourself executing the scripts
+in the measurements folder.
+
+|            | proof creation | verification |
+|------------|----------------|--------------|
+| ms | 1195.240       | 732.17       |
+
+Notice proofing is about a magnitute of x85 and verification about x700 slower then secp256k1.
 
 Thank you to the [Dalek team](https://dalek.rs/), their [Rust Bulletproof implementation](https://doc-internal.dalek.rs/bulletproofs/notes/range_proof/index.html), and it's excellent documentation assisted me heavily in learning and implementing the protocol.
