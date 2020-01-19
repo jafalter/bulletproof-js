@@ -185,6 +185,78 @@ class CompressedBulletproof extends RangeProof {
         const rightSide = G0.mul(a0BN).add(H0.mul(b0BN)).add(Q.mul(a0b0BN)).add(detinv);
         return leftSide.eq(rightSide);
     }
+
+    /**
+     * Get CompressedBulletproof from serialzed
+     * json string
+     *
+     * @param str {string}
+     * @return {CompressedBulletproof}
+     */
+    static fromJsonString(str) {
+        const obj = JSON.parse(str);
+
+        const intTerms = [];
+        for( let intT of obj.ind ) {
+            intTerms.push({
+                L : ec.keyFromPublic(intT.L, 'hex').pub,
+                R : ec.keyFromPublic(intT.R, 'hex').pub,
+            });
+        }
+
+        return new CompressedBulletproof(
+            ec.keyFromPublic(obj.V, 'hex').pub,
+            ec.keyFromPublic(obj.A, 'hex').pub,
+            ec.keyFromPublic(obj.S, 'hex').pub,
+            ec.keyFromPublic(obj.T1, 'hex').pub,
+            ec.keyFromPublic(obj.T2, 'hex').pub,
+            BigInt(obj.tx),
+            BigInt(obj.txbf),
+            BigInt(obj.e),
+            BigInt(obj.a0),
+            BigInt(obj.b0),
+            intTerms,
+            ec.keyFromPublic(obj.G, 'hex').pub,
+            BigInt(obj.order)
+        );
+    }
+
+    toJson() {
+        const intTerms = [];
+        for( let intT of this.ind ) {
+            intTerms.push({
+                L : intT.L.encode('hex'),
+                R: intT.R.encode('hex')
+            });
+        }
+
+        return JSON.stringify({
+            V : this.V.encode('hex'),
+            A : this.A.encode('hex'),
+            S : this.S.encode('hex'),
+            T1 : this.T1.encode('hex'),
+            T2 : this.T2.encode('hex'),
+            tx : '0x' + this.tx.toString(16),
+            txbf : '0x' + this.txbf.toString(16),
+            e : '0x' + this.e.toString(16),
+            a0 : '0x' + this.a0.toString(16),
+            b0 : '0x' + this.b0.toString(16),
+            ind : intTerms,
+            G : this.G.encode('hex'),
+            order : '0x' + this.order.toString(16)
+        });
+    }
+
+    /**
+     * Structure as given in secp256k1-zkp
+     * t, tau_x, mu, a, b, A, S, T_1, T_2, {L_i}, {R_i}
+     *               5 scalar + [4 + 2log(n)] ge
+     *
+     * t
+     *
+     */
+    toBytes() {
+    }
 }
 
 module.exports = CompressedBulletproof;
