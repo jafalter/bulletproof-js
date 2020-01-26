@@ -1,4 +1,5 @@
 const cryptoutils = require('bigint-crypto-utils');
+var EC = require('elliptic').ec;
 
 const RangeProof = require('./RangeProof');
 const PointVector = require('./PointVector');
@@ -7,6 +8,8 @@ const Utils = require('./Utils');
 const Maths = require('./Maths');
 const BigIntVector = require('./BigIntVector');
 const ProofUtils = require('./ProofUtils');
+
+const ec = new EC('secp256k1');
 
 class CompressedBulletproof extends RangeProof {
 
@@ -98,7 +101,7 @@ class CompressedBulletproof extends RangeProof {
 
         // Now prove validity of lx and rx
         // Now prove validity of lx and rx
-        const y_ninv = BigIntVector.getVectorToPowerMinusN( y, up, this.order);
+        const y_ninv = BigIntVector.getVectorToPowerModInvN( y, up, this.order);
         const vecH = PointVector.getVectorOfPoint(H, up);
         const vecG = PointVector.getVectorOfPoint(this.G, up);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
@@ -197,6 +200,34 @@ class CompressedBulletproof extends RangeProof {
         const detinv = det.neg();
         const rightSide = G0.mul(a0BN).add(H0.mul(b0BN)).add(Q.mul(a0b0BN)).add(detinv);
         return leftSide.eq(rightSide);
+    }
+
+    equals(e) {
+        if ( !(e instanceof CompressedBulletproof) ) {
+            return false;
+        }
+        if( this.ind.length !== e.ind.length ) {
+            return false;
+        }
+        for(let i = 0; i < this.ind.length; i++ ) {
+            const t1 = this.ind[i];
+            const t2 = e.ind[i];
+            if( !t1.L.eq(t2.L) || !t1.R.eq(t2.R) ) {
+                return false;
+            }
+        }
+        return this.V.eq(e.V) &&
+            this.A.eq(e.A) &&
+            this.S.eq(e.S) &&
+            this.T1.eq(e.T1) &&
+            this.T2.eq(e.T2) &&
+            this.tx === e.tx &&
+            this.txbf === e.txbf &&
+            this.e === e.e &&
+            this.a0 === e.a0 &&
+            this.b0 === e.b0 &&
+            this.G.eq(e.G) &&
+            this.order === e.order;
     }
 
     /**

@@ -1,4 +1,4 @@
-var EC = require('elliptic').ec;
+const EC = require('elliptic').ec;
 const assert = require('assert');
 const cryptoutils = require('bigint-crypto-utils');
 
@@ -11,7 +11,7 @@ const Transcript = require('./Transcript');
 const CompressedBulletproof = require('./CompressedBulletproof');
 const ProofUtils = require('./ProofUtils');
 
-var ec = new EC('secp256k1');
+const ec = new EC('secp256k1');
 
 /**
  * A bulletproof which can be verified or transformed into
@@ -167,7 +167,7 @@ class UncompressedBulletproof extends RangeProof {
         }
 
         // Now prove validity of lx and rx
-        const y_ninv = BigIntVector.getVectorToPowerMinusN(y, up, this.order);
+        const y_ninv = BigIntVector.getVectorToPowerModInvN(y, up, this.order);
         const vecH = PointVector.getVectorOfPoint(H, up);
         const vecG = PointVector.getVectorOfPoint(G, up);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
@@ -208,7 +208,7 @@ class UncompressedBulletproof extends RangeProof {
 
         const vecG = PointVector.getVectorOfPoint(G, len);
         const vecH = PointVector.getVectorOfPoint(H, len);
-        const y_ninv = BigIntVector.getVectorToPowerMinusN(this.y, BigInt(len), n);
+        const y_ninv = BigIntVector.getVectorToPowerModInvN(this.y, BigInt(len), n);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
         // Orthogonal generator B

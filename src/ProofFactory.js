@@ -116,7 +116,7 @@ class ProofFactory {
 
         const y = Utils.getFiatShamirChallengeTranscript(T, order);
         const y_n = BigIntVector.getVectorToPowerN( y, BigInt(a_L.length()), order );
-        const y_ninv = BigIntVector.getVectorToPowerMinusN( y, BigInt(a_L.length()), order);
+        const y_ninv = BigIntVector.getVectorToPowerModInvN( y, BigInt(a_L.length()), order);
         if( doAssert ) assert(y_n.length() === a_L.length() && y_n.length() === a_R.length(), "All vectors should be same length");
 
         const z = Utils.getFiatShamirChallengeTranscript(T, order, false);
