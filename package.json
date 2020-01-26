@@ -4,7 +4,7 @@
   "description": "Implementation of the bulletproof protocol in plain javascript",
   "main": "bulletproof-js.js",
   "scripts": {
-    "test": "mocha"
+    "test": "node_modules/.bin/nyc --reporter=lcov mocha"
   },
   "keywords": [
     "Cryptography"
