@@ -25,13 +25,19 @@ const ec = new EC('secp256k1');
 describe('Tests for the rangeproof', () => {
 
     it('Should create an uncompressed Bulletproof which should verify', () => {
+        // Blinding Factor (Should be choosed randomly)
         const x = 1897278917812981289198n;
+        // value for which we prove its range
         const val = 25n;
+        // Lower and upper bound of the range proof
         const low = 0n;
         const upper = 2n ** 64n;
 
+        // Curve generator
         const G = ec.g;
+        // Orthogonal generator
         const H = Utils.getnewGenFromHashingGen(G);
+        // Pedersen Commitment to our value
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
