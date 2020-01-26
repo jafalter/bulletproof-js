@@ -21,6 +21,15 @@ class PointVector extends Vector {
         this.elems = [];
     }
 
+    equals(pv2) {
+        if( !(pv2 instanceof PointVector) ) return false;
+        if( pv2.length() !== this.length() ) return false;
+        for( let i = 0; i < this.length(); i++ ) {
+            if( !this.get(i).eq(pv2.get(i)) ) return false;
+        }
+        return true;
+    }
+
     /**
      * @param e {Point}
      */

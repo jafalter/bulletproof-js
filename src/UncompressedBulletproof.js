@@ -1,4 +1,4 @@
-var EC = require('elliptic').ec;
+const EC = require('elliptic').ec;
 const assert = require('assert');
 const cryptoutils = require('bigint-crypto-utils');
 
@@ -11,7 +11,7 @@ const Transcript = require('./Transcript');
 const CompressedBulletproof = require('./CompressedBulletproof');
 const ProofUtils = require('./ProofUtils');
 
-var ec = new EC('secp256k1');
+const ec = new EC('secp256k1');
 
 /**
  * A bulletproof which can be verified or transformed into
@@ -91,21 +91,21 @@ class UncompressedBulletproof extends RangeProof {
      * @return {boolean}
      */
     equals(e) {
-        if( !(e instanceof UncompressedBulletproof) ) {
+        if (!(e instanceof UncompressedBulletproof)) {
             return false;
         }
         return this.V.eq(e.V) &&
-               this.A.eq(e.A) &&
-               this.S.eq(e.S) &&
-               this.T1.eq(e.T1) &&
-               this.T2.eq(e.T2) &&
-               this.tx === e.tx &&
-               this.txbf === e.txbf &&
-               this.e === e.e &&
-               this.lx.equals(e.lx) &&
-               this.rx.equals(e.rx) &&
-               this.G.eq(e.G) &&
-               this.order === e.order;
+            this.A.eq(e.A) &&
+            this.S.eq(e.S) &&
+            this.T1.eq(e.T1) &&
+            this.T2.eq(e.T2) &&
+            this.tx === e.tx &&
+            this.txbf === e.txbf &&
+            this.e === e.e &&
+            this.lx.equals(e.lx) &&
+            this.rx.equals(e.rx) &&
+            this.G.eq(e.G) &&
+            this.order === e.order;
     }
 
     /**
@@ -115,23 +115,23 @@ class UncompressedBulletproof extends RangeProof {
      */
     toJson() {
         return JSON.stringify({
-            V : this.V.encode('hex'),
-            A : this.A.encode('hex'),
-            S : this.S.encode('hex'),
-            T1 : this.T1.encode('hex'),
-            T2 : this.T2.encode('hex'),
-            tx : '0x' + this.tx.toString(16),
-            txbf : '0x' + this.txbf.toString(16),
-            e : '0x' + this.e.toString(16),
-            lx : this.lx.toObject(),
-            rx : this.rx.toObject(),
-            G : this.G.encode('hex'),
-            order : '0x' + this.order.toString(16)
-    });
+            V: this.V.encode('hex'),
+            A: this.A.encode('hex'),
+            S: this.S.encode('hex'),
+            T1: this.T1.encode('hex'),
+            T2: this.T2.encode('hex'),
+            tx: '0x' + this.tx.toString(16),
+            txbf: '0x' + this.txbf.toString(16),
+            e: '0x' + this.e.toString(16),
+            lx: this.lx.toObject(),
+            rx: this.rx.toObject(),
+            G: this.G.encode('hex'),
+            order: '0x' + this.order.toString(16)
+        });
     }
 
     verify(low, up) {
-        if(low !== 0n ) {
+        if (low !== 0n) {
             throw new Error("Currently only range proofs from 0 to n are allowed");
         }
         // Generator H
@@ -151,19 +151,23 @@ class UncompressedBulletproof extends RangeProof {
 
         // Verify that <lx, rx> = tx
         const vTx = Maths.mod(this.lx.multVectorToScalar(this.rx, this.order), this.order);
-        if( vTx !== this.tx ) { return false; }
+        if (vTx !== this.tx) {
+            return false;
+        }
 
         // Now we verify that t() is the right polynomial
         const zsq = Maths.mod(z ** 2n, this.order);
-        const y_n = BigIntVector.getVectorToPowerN( y, up, this.order );
+        const y_n = BigIntVector.getVectorToPowerN(y, up, this.order);
         const xsq = Maths.mod(x ** 2n, this.order);
 
         const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, H);
         const rightEq = this.V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
-        if( leftEq.eq(rightEq) === false ) { return false; }
+        if (leftEq.eq(rightEq) === false) {
+            return false;
+        }
 
         // Now prove validity of lx and rx
-        const y_ninv = BigIntVector.getVectorToPowerMinusN( y, up, this.order);
+        const y_ninv = BigIntVector.getVectorToPowerModInvN(y, up, this.order);
         const vecH = PointVector.getVectorOfPoint(H, up);
         const vecG = PointVector.getVectorOfPoint(G, up);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
@@ -173,7 +177,7 @@ class UncompressedBulletproof extends RangeProof {
         const Bx = Utils.toBN(x);
         const vec_z = BigIntVector.getVectorWithOnlyScalar(z, up, this.order);
 
-        const two_n  = BigIntVector.getVectorToPowerN(2n, BigInt(y_n.length()), this.order);
+        const two_n = BigIntVector.getVectorToPowerN(2n, BigInt(y_n.length()), this.order);
         const twos_times_zsq = two_n.multWithScalar(zsq);
 
         const l1 = y_n.multWithScalar(z).addVector(twos_times_zsq);
@@ -193,7 +197,7 @@ class UncompressedBulletproof extends RangeProof {
      * @param doAssert {boolean} if we should do assertions which will hurt performance
      * @return {CompressedBulletproof}
      */
-    compressProof(doAssert=false) {
+    compressProof(doAssert = false) {
         const G = this.G;
         const n = this.order;
         const H = Utils.getnewGenFromHashingGen(G);
@@ -204,7 +208,7 @@ class UncompressedBulletproof extends RangeProof {
 
         const vecG = PointVector.getVectorOfPoint(G, len);
         const vecH = PointVector.getVectorOfPoint(H, len);
-        const y_ninv = BigIntVector.getVectorToPowerMinusN(this.y, BigInt(len), n);
+        const y_ninv = BigIntVector.getVectorToPowerModInvN(this.y, BigInt(len), n);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
         // Orthogonal generator B
@@ -241,21 +245,20 @@ class UncompressedBulletproof extends RangeProof {
             const H_hi = new PointVector();
 
             const half = a_sum.length() / 2;
-            for( let i = 0; i < a_sum.length(); i++ ) {
-                if( i < half ) {
+            for (let i = 0; i < a_sum.length(); i++) {
+                if (i < half) {
                     a_lo.addElem(a_sum.get(i));
                     b_lo.addElem(b_sum.get(i));
                     G_lo.addElem(G_sum.get(i));
                     H_lo.addElem(H_sum.get(i));
-                }
-                else {
+                } else {
                     a_hi.addElem(a_sum.get(i));
                     b_hi.addElem(b_sum.get(i));
                     G_hi.addElem(G_sum.get(i));
                     H_hi.addElem(H_sum.get(i));
                 }
             }
-            if( doAssert ) {
+            if (doAssert) {
                 assert(a_lo.length() === a_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
                 assert(b_lo.length() === b_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
                 assert(G_lo.length() === G_hi.length(), "Length of those vectors needs to be the same when we start for a length which is a exponent of 2");
@@ -275,14 +278,14 @@ class UncompressedBulletproof extends RangeProof {
             let ukBN = Utils.toBN(uk);
             const ukinvBN = Utils.toBN(ukinv);
 
-            if( doAssert ) {
+            if (doAssert) {
                 assert(Maths.mod(uk * ukinv, n) === 1n);
                 assert(G.mul(Utils.toBN(uk * ukinv)).eq(G));
             }
 
             intermediateTerms.push({
-                L : Lk,
-                R : Rk,
+                L: Lk,
+                R: Rk,
                 u: uk
             });
 
@@ -291,15 +294,15 @@ class UncompressedBulletproof extends RangeProof {
             b_sum = new BigIntVector(n);
             G_sum = new PointVector();
             H_sum = new PointVector();
-            for ( let i = 0; i < a_lo.length(); i++ ) {
+            for (let i = 0; i < a_lo.length(); i++) {
                 a_sum.addElem(a_lo.get(i) * uk + ukinv * a_hi.get(i));
                 b_sum.addElem(b_lo.get(i) * ukinv + uk * b_hi.get(i));
 
-                G_sum.addElem( G_lo.get(i).mul(ukinvBN).add(G_hi.get(i).mul(ukBN)) );
-                H_sum.addElem( H_lo.get(i).mul(ukBN).add(H_hi.get(i).mul(ukinvBN)) );
+                G_sum.addElem(G_lo.get(i).mul(ukinvBN).add(G_hi.get(i).mul(ukBN)));
+                H_sum.addElem(H_lo.get(i).mul(ukBN).add(H_hi.get(i).mul(ukinvBN)));
             }
 
-            if( doAssert && first ) {
+            if (doAssert && first) {
                 const P_star = P.add(Q.mul(cBN));
 
                 const a_sum_b_sum = Utils.toBN(a_sum.multVectorToScalar(b_sum));
@@ -308,7 +311,7 @@ class UncompressedBulletproof extends RangeProof {
                 const Rj = intermediateTerms[0].R;
                 const uj2 = Maths.mod(uk ** 2n, n);
                 const uj2_BN = Utils.toBN(uj2);
-                const uj2inv = Maths.mod( cryptoutils.modInv(uj2, n), n);
+                const uj2inv = Maths.mod(cryptoutils.modInv(uj2, n), n);
                 const uj2invBN = Utils.toBN(uj2inv);
 
                 assert(Maths.mod(uj2 * uj2inv, n) === 1n);
@@ -329,7 +332,7 @@ class UncompressedBulletproof extends RangeProof {
         const b0BN = Utils.toBN(b0);
         const c0 = Maths.mod(a0 * b0, n);
         const c0BN = Utils.toBN(c0);
-        if( doAssert ) {
+        if (doAssert) {
             const P_star = P.add(Q.mul(cBN));
             const L0 = intermediateTerms[0].L;
             const R0 = intermediateTerms[0].R;
@@ -339,7 +342,7 @@ class UncompressedBulletproof extends RangeProof {
             const u02inv = cryptoutils.modInv(u02, n);
             const u02invBN = Utils.toBN(u02inv);
             let det = L0.mul(u02BN).add(R0.mul(u02invBN));
-            for( let j = 1; j < intermediateTerms.length; j++ ) {
+            for (let j = 1; j < intermediateTerms.length; j++) {
                 const Lj = intermediateTerms[j].L;
                 const Rj = intermediateTerms[j].R;
                 const uj = intermediateTerms[j].u;
@@ -353,11 +356,11 @@ class UncompressedBulletproof extends RangeProof {
             }
             const detinv = det.neg();
 
-            const P0 =  G0.mul(a0BN).add(H0.mul(b0BN)).add(Q.mul(c0BN));
+            const P0 = G0.mul(a0BN).add(H0.mul(b0BN)).add(Q.mul(c0BN));
             assert(P_star.eq(P0.add(detinv)), 'What the verifier will check');
         }
         // Remove the u's from the intermediate Terms. Verifier will calculate themself
-        for( let int of intermediateTerms) {
+        for (let int of intermediateTerms) {
             delete int['u'];
         }
 

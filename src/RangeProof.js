@@ -13,11 +13,11 @@ class RangeProof {
     }
 
     toJson() {
-        return null;
+        throw new Error("toJson not implemented");
     }
 
     toBytes() {
-        return null;
+        throw new Error("toBytes not implemented");
     }
 
     equals(e) {

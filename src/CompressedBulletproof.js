@@ -1,4 +1,5 @@
 const cryptoutils = require('bigint-crypto-utils');
+var EC = require('elliptic').ec;
 
 const RangeProof = require('./RangeProof');
 const PointVector = require('./PointVector');
@@ -8,7 +9,22 @@ const Maths = require('./Maths');
 const BigIntVector = require('./BigIntVector');
 const ProofUtils = require('./ProofUtils');
 
+const ec = new EC('secp256k1');
+
 class CompressedBulletproof extends RangeProof {
+
+    /**
+     * Create an instance of CompressedBulletproof from a hex
+     * encoded string (compatible with secp256k1-zkp)
+     *
+     * secp256k1-zkp Proof format: t, tau_x, mu, a, b, A, S, T_1, T_2, {L_i}, {R_i}
+     *               5 scalar + [4 + 2log(n)] ge
+     *
+     * @return {CompressedBulletproof}
+     */
+    static fromHexString(str) {
+        return new CompressedBulletproof();
+    }
 
     /**
      *
@@ -85,7 +101,7 @@ class CompressedBulletproof extends RangeProof {
 
         // Now prove validity of lx and rx
         // Now prove validity of lx and rx
-        const y_ninv = BigIntVector.getVectorToPowerMinusN( y, up, this.order);
+        const y_ninv = BigIntVector.getVectorToPowerModInvN( y, up, this.order);
         const vecH = PointVector.getVectorOfPoint(H, up);
         const vecG = PointVector.getVectorOfPoint(this.G, up);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
@@ -184,6 +200,106 @@ class CompressedBulletproof extends RangeProof {
         const detinv = det.neg();
         const rightSide = G0.mul(a0BN).add(H0.mul(b0BN)).add(Q.mul(a0b0BN)).add(detinv);
         return leftSide.eq(rightSide);
+    }
+
+    equals(e) {
+        if ( !(e instanceof CompressedBulletproof) ) {
+            return false;
+        }
+        if( this.ind.length !== e.ind.length ) {
+            return false;
+        }
+        for(let i = 0; i < this.ind.length; i++ ) {
+            const t1 = this.ind[i];
+            const t2 = e.ind[i];
+            if( !t1.L.eq(t2.L) || !t1.R.eq(t2.R) ) {
+                return false;
+            }
+        }
+        return this.V.eq(e.V) &&
+            this.A.eq(e.A) &&
+            this.S.eq(e.S) &&
+            this.T1.eq(e.T1) &&
+            this.T2.eq(e.T2) &&
+            this.tx === e.tx &&
+            this.txbf === e.txbf &&
+            this.e === e.e &&
+            this.a0 === e.a0 &&
+            this.b0 === e.b0 &&
+            this.G.eq(e.G) &&
+            this.order === e.order;
+    }
+
+    /**
+     * Get CompressedBulletproof from serialzed
+     * json string
+     *
+     * @param str {string}
+     * @return {CompressedBulletproof}
+     */
+    static fromJsonString(str) {
+        const obj = JSON.parse(str);
+
+        const intTerms = [];
+        for( let intT of obj.ind ) {
+            intTerms.push({
+                L : ec.keyFromPublic(intT.L, 'hex').pub,
+                R : ec.keyFromPublic(intT.R, 'hex').pub,
+            });
+        }
+
+        return new CompressedBulletproof(
+            ec.keyFromPublic(obj.V, 'hex').pub,
+            ec.keyFromPublic(obj.A, 'hex').pub,
+            ec.keyFromPublic(obj.S, 'hex').pub,
+            ec.keyFromPublic(obj.T1, 'hex').pub,
+            ec.keyFromPublic(obj.T2, 'hex').pub,
+            BigInt(obj.tx),
+            BigInt(obj.txbf),
+            BigInt(obj.e),
+            BigInt(obj.a0),
+            BigInt(obj.b0),
+            intTerms,
+            ec.keyFromPublic(obj.G, 'hex').pub,
+            BigInt(obj.order)
+        );
+    }
+
+    toJson() {
+        const intTerms = [];
+        for( let intT of this.ind ) {
+            intTerms.push({
+                L : intT.L.encode('hex'),
+                R: intT.R.encode('hex')
+            });
+        }
+
+        return JSON.stringify({
+            V : this.V.encode('hex'),
+            A : this.A.encode('hex'),
+            S : this.S.encode('hex'),
+            T1 : this.T1.encode('hex'),
+            T2 : this.T2.encode('hex'),
+            tx : '0x' + this.tx.toString(16),
+            txbf : '0x' + this.txbf.toString(16),
+            e : '0x' + this.e.toString(16),
+            a0 : '0x' + this.a0.toString(16),
+            b0 : '0x' + this.b0.toString(16),
+            ind : intTerms,
+            G : this.G.encode('hex'),
+            order : '0x' + this.order.toString(16)
+        });
+    }
+
+    /**
+     * Structure as given in secp256k1-zkp
+     * t, tau_x, mu, a, b, A, S, T_1, T_2, {L_i}, {R_i}
+     *               5 scalar + [4 + 2log(n)] ge
+     *
+     * t
+     *
+     */
+    toBytes() {
     }
 }
 

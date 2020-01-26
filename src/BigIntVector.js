@@ -61,19 +61,14 @@ class BigIntVector extends Vector {
      * @param n {BigInt} optional number if calculations should be mod order
      * @return {BigIntVector}
      */
-    static getVectorToPowerMinusN(y, e, n = false) {
-        if( typeof y !== 'bigint' || typeof e !== 'bigint' ) {
-            throw new Error("Please provide y and order as bigints");
+    static getVectorToPowerModInvN(y, e, n) {
+        if( typeof y !== 'bigint' || typeof e !== 'bigint' || typeof n !== 'bigint') {
+            throw new Error("Please provide y, e and order as bigints");
         }
 
         const vec = new BigIntVector(n);
         for( let i = 0n; i < e; i++ ) {
-            if( typeof  n === 'bigint' ) {
-                vec.addElem(cryptoutils.modInv(y ** i, n));
-            }
-            else {
-                vec.addElem(y ** i);
-            }
+            vec.addElem(cryptoutils.modInv(y ** i, n));
         }
         return vec;
     }
@@ -82,7 +77,7 @@ class BigIntVector extends Vector {
      * Construct BigInt Vector from array
      * of hex strings
      *
-     * @param a {{order : string, elems : []}}
+     * @param a {{n : string, elems : []}}
      */
     static getFromObject(a) {
         const n = a.n ? BigInt(a.n) : false;
@@ -101,6 +96,10 @@ class BigIntVector extends Vector {
      * @param n {BigInt} Optional group order
      */
     constructor(n=false) {
+        if( n && typeof n !== 'bigint' ) {
+            throw new Error("Need to put a BigInt as order or no order");
+        }
+
         super();
         this.elems = [];
         this.mod = n !== false;

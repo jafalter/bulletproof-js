@@ -7,131 +7,22 @@ const cryptoutils = require('bigint-crypto-utils');
 const Factory = require('../src/ProofFactory');
 const PointVector = require('../src/PointVector');
 const UncompressedBulletproof = require('../src/UncompressedBulletproof');
+const CompressedBulletproof = require('../src/CompressedBulletproof');
 const Utils = require('../src/Utils');
 const Maths = require('../src/Maths');
 const BigIntVector = require('../src/BigIntVector');
 const secp256k1 = require('../src/Constants').secp256k1;
+
+const fixtures_dir = path.join(__dirname, 'fixtures');
+const serUncProof = fs.readFileSync( fixtures_dir+ '/uncompressed_proof.json', 'utf-8');
+const serComProof = fs.readFileSync( fixtures_dir+ '/compressed_proof.json', 'utf-8');
+const tx = JSON.parse(fs.readFileSync(fixtures_dir + "/transaction.tx", 'utf-8'));
 
 const testTimeout = 10000;
 
 const ec = new EC('secp256k1');
 
 describe('Tests for the rangeproof', () => {
-
-    it('Test for transmutated generator', () => {
-        const G = ec.g;
-        const vec = new BigIntVector(secp256k1.n);
-        vec.addElem(2n);
-        vec.addElem(3n);
-        const vecInv = new BigIntVector(secp256k1.n);
-        vecInv.addElem(cryptoutils.modInv(2n, secp256k1.n));
-        vecInv.addElem(cryptoutils.modInv(3n, secp256k1.n));
-        const vecG = PointVector.getVectorOfPoint(G, 2);
-
-        const vecG2 = vecG.multWithBigIntVector(vecInv);
-        const vecG3 = vecG2.multWithBigIntVector(vec);
-        assert(G.eq(vecG3.get(0)));
-        assert(G.eq(vecG3.get(1)));
-    });
-
-    it('Test for substraction on points', () => {
-       const G = ec.g;
-       const P3 = G.mul(Utils.toBN(3n));
-       const P2 = G.mul(Utils.toBN(2n));
-       const P5 = G.mul(Utils.toBN(5n));
-       const P = P5.add(P2.neg());
-       assert(P.eq(P3));
-    });
-
-    it('Test additive homomorphic quality of pedersen commitments', () => {
-        const v1 = 9018549012398012093n;
-        const x1 = 89124798129839871987249812n;
-        const c1 = Utils.getPedersenCommitment(v1, x1);
-
-        const v2 = 90172589102478901273n;
-        const x2 = 509867892649082376409171892n;
-        const c2 = Utils.getPedersenCommitment(v2, x2);
-
-        const c3 = Utils.getPedersenCommitment(v1 + v2, x1 + x2,);
-        assert(c1.add(c2).eq(c3));
-    });
-
-    it('Test the Vector function multVectorWithPointToPoint', () => {
-       const v = new BigIntVector(secp256k1.n);
-       v.addElem(2n);
-       v.addElem(3n);
-       v.addElem(4n);
-       v.addElem(6n);
-       v.addElem(1n);
-
-       const G = ec.g;
-
-       const P1 = v.multVectorWithPointToPoint(G);
-       const P2 = G.mul(Utils.toBN(v.toScalar()));
-       const P3 = G.mul(Utils.toBN(16n));
-       const P4 = G.mul(Utils.toBN(2n)).add(G.mul(Utils.toBN(3n))).add(G.mul(Utils.toBN(4n))).add(G.mul(Utils.toBN(6n))).add(G.mul(Utils.toBN(1n)))
-
-       assert(P1.eq(P2));
-       assert(P2.eq(P3));
-       assert(P3.eq(P4));
-    });
-
-
-
-    it('Test modulos Function', () => {
-       const a = 1512312512n;
-       const b = -1512312512n;
-       const n = 10n;
-       assert(Maths.mod(a,n) === 2n);
-       assert(Maths.mod(b,n) === 8n);
-    });
-
-    it('Test mult properties of pedersen commitments', () => {
-        const sc = 8091561783246108246301n;
-
-        const t1 = 78689278935479823809745892304n;
-        const r = 89124798129839871987249812n;
-        const T1 = Utils.getPedersenCommitment(t1, r);
-
-        const T2 = Utils.getPedersenCommitment(t1 * sc, r * sc);
-
-        assert(T1.mul(Utils.toBN(sc)).eq(T2));
-    });
-
-    it('Test mult property of commitments', () => {
-        const n = secp256k1.n;
-        const T1 = ec.g.mul(Utils.toBN(n + 5n));
-        const T2 = ec.g.mul(Utils.toBN(Maths.mod(n + 5n, n)));
-        const T3 = ec.g.mul(Utils.toBN(5n));
-        assert(T1.eq(T2));
-        assert(T2.eq(T3));
-    });
-
-    it('Test mult properties of pedersen with negative num 1', () => {
-        const n = secp256k1.n;
-        const t1 = Maths.mod(-4424687248756834944667496427199067151987779098219282389160949909025658367322n, n);
-        const x = Maths.mod(38659561957554344830346811456777626115164894886626759056962864666140509109118n, n);
-        const xBN  = Utils.toBN(x);
-        const r = Maths.mod(206032474729127474062261152183333172264689698899312462254655119185748812599n, n);
-
-        const T1 = Utils.getPedersenCommitment(t1, r);
-        const T1cmp = Utils.getPedersenCommitment(t1 * x, r * x);
-
-        assert(T1.mul(xBN).eq(T1cmp));
-    });
-
-    it('Test mult properties of pedersen with negative num with order', () => {
-        const n = secp256k1.n;
-        const t1 = Maths.mod(-4424687248756834944667496427199067151987779098219282389160949909025658367322n, n);
-        const x = Maths.mod(38659561957554344830346811456777626115164894886626759056962864666140509109118n, n);
-        const xBN  = Utils.toBN(x);
-        const r = Maths.mod(206032474729127474062261152183333172264689698899312462254655119185748812599n, n);
-
-        const T1 = Utils.getPedersenCommitment(t1, r);
-        const T1cmp = Utils.getPedersenCommitment(Maths.mod(t1 * x, n), Maths.mod(r * x, n));
-
-        assert(T1.mul(xBN).eq(T1cmp));
-    });
 
     it('Should create an uncompressed Bulletproof which should verify', () => {
         const x = 1897278917812981289198n;
@@ -163,11 +54,66 @@ describe('Tests for the rangeproof', () => {
         des.equals(ser);
     }).timeout(testTimeout);
 
+    it('Should fail to create a proof for a negative number', () => {
+        const x = 1897278917812981289198n;
+        const val = -25n;
+        const low = 0n;
+        const upper = 2n ** 64n;
+
+        const G = ec.g;
+        const H = Utils.getnewGenFromHashingGen(G);
+        const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
+
+        let error = null;
+        try {
+            const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
+        } catch (e) {
+            error = e;
+        }
+        assert(error !== null);
+    });
+
+    it('Should fail to create a proof for a too big number', () => {
+        const x = 1897278917812981289198n;
+        const low = 0n;
+        const upper = 2n ** 64n;
+        const val = upper + 1n;
+
+        const G = ec.g;
+        const H = Utils.getnewGenFromHashingGen(G);
+        const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
+
+        let error = null;
+        try {
+            const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
+        } catch (e) {
+            error = e;
+        }
+        assert(error !== null);
+    });
+
     it('Should compress the UncompressedBulletproof into a compressed one, which should verify', () => {
-        const serProof = fs.readFileSync(path.join(__dirname, 'fixtures') + '/uncompressed_proof.json', 'utf-8');
-        const prf = UncompressedBulletproof.fromJsonString(serProof);
+        const prf = UncompressedBulletproof.fromJsonString(serUncProof);
         const compr = prf.compressProof(true);
         assert(compr.verify(0n, 64n));
+    }).timeout(testTimeout);
+
+    it('Should fail when verifing a uncompressed proof with invalid ranges', () => {
+        const prf = UncompressedBulletproof.fromJsonString(serUncProof);
+        assert(!prf.verify(0n, 63n));
+    }).timeout(testTimeout);
+
+    it('Should fail when verifing a compressed proof with invalid ranges', () => {
+        const prf = CompressedBulletproof.fromJsonString(serComProof);
+        assert(!prf.verify(0n, 63n));
+    }).timeout(testTimeout);
+
+    it('Should serialize and deserialize a compressed proof correctly', () => {
+        const prf = UncompressedBulletproof.fromJsonString(serUncProof);
+        const compr = prf.compressProof(true);
+        const ser = compr.toJson();
+        const des = CompressedBulletproof.fromJsonString(ser);
+        compr.equals(des);
     }).timeout(testTimeout);
 
     it('Should test the basis of the inner product compression', () => {
