@@ -11,6 +11,19 @@ const ProofUtils = require('./ProofUtils');
 class CompressedBulletproof extends RangeProof {
 
     /**
+     * Create an instance of CompressedBulletproof from a hex
+     * encoded string (compatible with secp256k1-zkp)
+     *
+     * secp256k1-zkp Proof format: t, tau_x, mu, a, b, A, S, T_1, T_2, {L_i}, {R_i}
+     *               5 scalar + [4 + 2log(n)] ge
+     *
+     * @return {CompressedBulletproof}
+     */
+    static fromHexString(str) {
+        return new CompressedBulletproof();
+    }
+
+    /**
      *
      * @param V {Point} Pedersen commitment for which the range is proven
      * @param A {Point} Vector pedersen commitment committing to a_L and a_R the amount split into a vector which is the amount in binary and a vector containing exponents of 2

@@ -7,10 +7,15 @@ const cryptoutils = require('bigint-crypto-utils');
 const Factory = require('../src/ProofFactory');
 const PointVector = require('../src/PointVector');
 const UncompressedBulletproof = require('../src/UncompressedBulletproof');
+const CompressedBulletproof = require('../src/CompressedBulletproof');
 const Utils = require('../src/Utils');
 const Maths = require('../src/Maths');
 const BigIntVector = require('../src/BigIntVector');
 const secp256k1 = require('../src/Constants').secp256k1;
+
+const fixtures_dir = path.join(__dirname, 'fixtures');
+const serProof = fs.readFileSync( fixtures_dir+ '/uncompressed_proof.json', 'utf-8');
+const tx = JSON.parse(fs.readFileSync(fixtures_dir + "/transaction.tx", 'utf-8'));
 
 const testTimeout = 10000;
 
@@ -164,7 +169,6 @@ describe('Tests for the rangeproof', () => {
     }).timeout(testTimeout);
 
     it('Should compress the UncompressedBulletproof into a compressed one, which should verify', () => {
-        const serProof = fs.readFileSync(path.join(__dirname, 'fixtures') + '/uncompressed_proof.json', 'utf-8');
         const prf = UncompressedBulletproof.fromJsonString(serProof);
         const compr = prf.compressProof(true);
         assert(compr.verify(0n, 64n));
@@ -293,5 +297,11 @@ describe('Tests for the rangeproof', () => {
 
         const det = Lkuk2.add(Rkuk2inv);
         assert(P_star.eq(Pk.add(det.neg())));
+    });
+
+    it('Should be able to verify a proof created with secp256k1-zkp', () => {
+        const hexproof = tx.tx.body.outputs[0].proof;
+        const prf = CompressedBulletproof.fromHexString(hexproof);
+        assert(prf.verify(0n, 64n));
     });
 });
