@@ -10,8 +10,6 @@ const PointVector = require('../src/PointVector');
 const Maths = require('../src/Maths');
 const secp256k1 = require('../src/Constants').secp256k1;
 
-const fixtures_dir = path.join(__dirname, 'fixtures');
-
 const ec = new EC('secp256k1');
 
 describe('Unit Tests for the BigIntVector class', () => {
