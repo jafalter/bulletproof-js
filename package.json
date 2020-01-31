@@ -1,6 +1,6 @@
 {
   "name": "bulletproof-js",
-  "version": "0.0.0",
+  "version": "1.0.5",
   "description": "Implementation of the bulletproof protocol in plain javascript",
   "main": "bulletproof-js.js",
   "scripts": {
@@ -11,6 +11,14 @@
   ],
   "author": "Jakob Abfalter",
   "license": "ISC",
+  "bugs" : {
+    "url" : "https://github.com/jafalter/bulletproof-js/issues",
+    "email" : "JakobAbfalter@gmail.com"
+  },
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/jafalter/bulletproof-js"
+  },
   "dependencies": {
     "assert": "^2.0.0",
     "bigint-crypto-utils": "^2.3.1",

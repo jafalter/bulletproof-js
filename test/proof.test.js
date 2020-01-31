@@ -31,7 +31,7 @@ describe('Tests for the rangeproof', () => {
         const val = 25n;
         // Lower and upper bound of the range proof
         const low = 0n;
-        const upper = 2n ** 64n;
+        const upper = 64n;
 
         // Curve generator
         const G = ec.g;
@@ -41,14 +41,14 @@ describe('Tests for the rangeproof', () => {
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
-        assert(prf.verify(0n, 64n));
+        assert(prf.verify(low, upper));
     }).timeout(testTimeout);
 
     it('Should create an uncompressed Bulletproof serialize and deserialize correctly', () => {
         const x = 1897278917812981289198n;
         const val = 25n;
         const low = 0n;
-        const upper = 2n ** 64n;
+        const upper = 64n;
 
         const G = ec.g;
         const H = Utils.getnewGenFromHashingGen(G);
@@ -64,7 +64,7 @@ describe('Tests for the rangeproof', () => {
         const x = 1897278917812981289198n;
         const val = -25n;
         const low = 0n;
-        const upper = 2n ** 64n;
+        const upper = 64n;
 
         const G = ec.g;
         const H = Utils.getnewGenFromHashingGen(G);
@@ -82,8 +82,8 @@ describe('Tests for the rangeproof', () => {
     it('Should fail to create a proof for a too big number', () => {
         const x = 1897278917812981289198n;
         const low = 0n;
-        const upper = 2n ** 64n;
-        const val = upper + 1n;
+        const upper = 64n;
+        const val = (2n ** upper) + 1n;
 
         const G = ec.g;
         const H = Utils.getnewGenFromHashingGen(G);

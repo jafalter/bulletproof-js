@@ -26,8 +26,8 @@ slowing down the code, but also making it easier to understand and write. Furthe
 verifier side which I couldn't get to work yet, which is why verification is much slower compared to other
 libraries then proof creation.
 
-Here are the measurements and comparisons. I took them with an Intel Core i5-4690 3.5GHz on NodeJS 12. You can do them yourself executing the scripts
-in the measurements folder.
+Here are the measurement and comparisons. I took measurements for bulletproof-js with an Intel Core i5-4690 3.5GHz on NodeJS 12. You can do them yourself executing the scripts
+in the measurements folder. Comparisons are taken from [Dalek Rust Bulletproof implementation](https://doc-internal.dalek.rs/bulletproofs/notes/range_proof/index.html)
 
 |                | proof creation (μs) | rel     | verification (μs) | rel     | curve        |
 |----------------|---------------------|---------|-------------------|---------|--------------|
@@ -42,28 +42,52 @@ Thank you to the [Dalek team](https://dalek.rs/), their [Rust Bulletproof implem
 
 ## Usage
 
+### Installation
+```cmd
+npm install --save bulletproof-js
+```
+
 There are two versions of Bulletproofs you can create and uncompressed and a compressed version.
 The uncompressed version will just contain the two vectors not running the inner product proof protocol.
 It will be faster to compute but it's size will be (3 scalar + [4 + 2n] commitments).
 The size of the compressed version in contrast is only (5 scalar + [4 + log(n)] commitments)
 
-### Uncompressed Bulletproof
-#### Proof Creation
+#### Proof Creation and Verification
 ```javascript
-TODO
-```
-#### Proof Verification
-```javascript
-TODO
-```
+const bulletproofs = require('bulletproof-js');
+const EC = require('elliptic').ec;
+const cryptoutils = require('bigint-crypto-utils');
 
-### Compressed Bulletproof
-#### Proof Creation
-```javascript
-TODO
-```
+const ProofFactory = bulletproofs.ProofFactory;
+const ProofUtils = bulletproofs.ProofUtils;
+const secp256k1 = bulletproofs.Constants.secp256k1;
+const ec = new EC('secp256k1');
 
-#### Proof Verification
-```javascript
-TODO
+// Random blinding factor
+const x = cryptoutils.randBetween(secp256k1.n);
+
+// Amount to which we commit
+const a = 25003n;
+
+// Lower and upper bound of range proof (this will be treated as exponents of 2)
+const low = 0n;
+const upper = 64n;
+
+// Generator
+const G = ec.g;
+// Orthogonal Generator
+const H = ProofUtils.getnewGenFromHashingGen(G);
+// Pedersen Commitment to our amount
+const V = ProofUtils.getPedersenCommitment(a, x, secp256k1.n, H);
+
+// Compute an uncompressed proof first. Note the last parameter will switch off asserts improving performance
+const uncompr_proof = ProofFactory.computeBulletproof(a, x, V, G, H, low, upper, secp256k1.n, false);
+// Compress proof using the inner product protocol (Again pass false to switch off asserts)
+const compr_proof = uncompr_proof.compressProof(false);
+
+// Proofs can be serialized and deserialized to and from JSON.
+console.log(compr_proof.toJson(true));
+// Verify a proof calling the verify function on the proof object (works on both uncompressed and compressed version)
+console.log(compr_proof.verify(low, upper) ? 'Valid proof' : 'Invalid Proof');
+```
 ```

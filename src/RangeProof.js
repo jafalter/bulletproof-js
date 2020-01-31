@@ -12,7 +12,7 @@ class RangeProof {
         return false;
     }
 
-    toJson() {
+    toJson(pp=false) {
         throw new Error("toJson not implemented");
     }
 
