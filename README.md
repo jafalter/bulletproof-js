@@ -38,6 +38,7 @@ in the measurements folder. Comparisons are taken from [Dalek Rust Bulletproof i
 | Monero         | 53300               | 7.30x   | 4810              | 4.63x   | ed25519      |
 | bulletproof-js | 1195240             | 163.73x | 732170            | 704.00x | secp256k1    |
 
+
 Special thanks to Pedro Moreno Sanchez heavily assisting me with learning the cryptography around the Bulletproof protocol. 
 
 Thank you to the [Dalek team](https://dalek.rs/), their [Rust Bulletproof implementation](https://doc-internal.dalek.rs/bulletproofs/notes/range_proof/index.html), and it's excellent documentation assisted me heavily in learning and implementing the protocol.
@@ -137,7 +138,7 @@ Execution output:
 Valid proof
 ```
 
-### Deserializing Proof from JSON string
+### Deserializing from JSON string
 
 ```javascript
 const bulletproof = require('bulletproof-js');
