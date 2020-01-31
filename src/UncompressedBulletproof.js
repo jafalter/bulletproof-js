@@ -113,8 +113,8 @@ class UncompressedBulletproof extends RangeProof {
      *
      * @return {string}
      */
-    toJson() {
-        return JSON.stringify({
+    toJson(pp=false) {
+        const obj = {
             V: this.V.encode('hex'),
             A: this.A.encode('hex'),
             S: this.S.encode('hex'),
@@ -127,7 +127,8 @@ class UncompressedBulletproof extends RangeProof {
             rx: this.rx.toObject(),
             G: this.G.encode('hex'),
             order: '0x' + this.order.toString(16)
-        });
+        };
+        return pp ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
     }
 
     verify(low, up) {
@@ -142,12 +143,6 @@ class UncompressedBulletproof extends RangeProof {
         const y = this.y;
         const z = this.z;
         const x = this.x;
-        console.log(`
-        Challenges:
-        y : ${y}
-        z : ${z}
-        x : ${x}
-        `);
 
         // Verify that <lx, rx> = tx
         const vTx = Maths.mod(this.lx.multVectorToScalar(this.rx, this.order), this.order);

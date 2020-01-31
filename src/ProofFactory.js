@@ -21,16 +21,19 @@ class ProofFactory {
      *                  has to be a valid commitement to v with blinding factor B
      * @param G {Point} generator G used in pedersen
      * @param H {Point} generator H used in pedersen
-     * @param lowBound {BigInt} the lower bound of the rangeproof. Please use BigInt not number
-     * @param upBound {BigInt} the upper bound of the rangeproof. Please use BigInt not number
+     * @param lower {BigInt} the lower bound of the rangeproof. (exponent of 2) Please use BigInt not number
+     * @param upper {BigInt} the upper bound of the rangeproof. (exponent of 2) Please use BigInt not number
      * @param order {BigInt} Order of the group. All calculations will be mod order
      * @param doAssert {boolean} if we should do asserts. Should be set to false in production for performance gains
      * @param randomNum {boolean|function} optional random bigint generating function
      * @return {UncompressedBulletproof} Final rangeproof which can be verified
      */
-    static computeBulletproof(v, bf, V, G, H, lowBound, upBound, order, doAssert=true, randomNum=false) {
+    static computeBulletproof(v, bf, V, G, H, lower, upper, order, doAssert=true, randomNum=false) {
 
         const T = new Transcript();
+        const upBound = 2n ** upper;
+        const lowBound = lower;
+
         if( typeof v !== "bigint" || typeof  bf !== "bigint" || typeof lowBound !== "bigint" || typeof upBound !== "bigint" ) {
             throw new Error("Parameters val, x, low and upper bound have to be bigints");
         }

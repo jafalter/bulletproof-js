@@ -1,6 +1,6 @@
 {
   "name": "bulletproof-js",
-  "version": "0.0.0",
+  "version": "1.0.4",
   "description": "Implementation of the bulletproof protocol in plain javascript",
   "main": "bulletproof-js.js",
   "scripts": {

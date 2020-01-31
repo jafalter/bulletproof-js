@@ -265,7 +265,7 @@ class CompressedBulletproof extends RangeProof {
         );
     }
 
-    toJson() {
+    toJson(pp=false) {
         const intTerms = [];
         for( let intT of this.ind ) {
             intTerms.push({
@@ -274,7 +274,7 @@ class CompressedBulletproof extends RangeProof {
             });
         }
 
-        return JSON.stringify({
+        const obj = {
             V : this.V.encode('hex'),
             A : this.A.encode('hex'),
             S : this.S.encode('hex'),
@@ -288,7 +288,9 @@ class CompressedBulletproof extends RangeProof {
             ind : intTerms,
             G : this.G.encode('hex'),
             order : '0x' + this.order.toString(16)
-        });
+        };
+
+        return pp ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
     }
 
     /**
