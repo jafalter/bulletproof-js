@@ -32,6 +32,11 @@ describe('Tests for some of the crypto stuff', () => {
         assert(G.eq(vecG3.get(1)));
     });
 
+    it('sha256 of G should be the same H as used in libsec', () => {
+        const H = Utils.getnewGenFromHashingGen(ec.g);
+        assert(H.encode('hex') === '0450929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac031d3c6863973926e049e637cb1b5f40a36dac28af1766968c30c2313f3a38904');
+    });
+
     it('Test for substraction on points', () => {
         const G = ec.g;
         const P3 = G.mul(Utils.toBN(3n));

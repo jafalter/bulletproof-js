@@ -31,13 +31,20 @@ class Utils {
         return hash.hex();
     }
 
+    static sha256hextohex(hx) {
+        const hash = sha256.create();
+        const inp = Buffer.from(hx, 'hex');
+        hash.update(inp);
+        return hash.hex();
+    }
+
     /**
      * Generate a sha256 hash of a elliptic curve point
      *
      * @param p {Point}
      */
     static sha256pointtohex(p) {
-        return Utils.sha256strtohex(p.encode('hex'));
+        return Utils.sha256hextohex(p.encode('hex'));
     }
 
     /**
