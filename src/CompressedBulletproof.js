@@ -1,6 +1,8 @@
 const cryptoutils = require('bigint-crypto-utils');
+
 var EC = require('elliptic').ec;
 
+const constants = require('./Constants');
 const RangeProof = require('./RangeProof');
 const PointVector = require('./PointVector');
 const Transcript = require('./Transcript');
@@ -17,12 +19,28 @@ class CompressedBulletproof extends RangeProof {
      * Create an instance of CompressedBulletproof from a hex
      * encoded string (compatible with secp256k1-zkp)
      *
+     * @param str {string}
      * secp256k1-zkp Proof format: t, tau_x, mu, a, b, A, S, T_1, T_2, {L_i}, {R_i}
      *               5 scalar + [4 + 2log(n)] ge
      *
      * @return {CompressedBulletproof}
      */
     static fromHexString(str) {
+        const tauhex = str.substr(0,64);
+        const tau = BigInt('0x' + tauhex);
+        const muhex = str.substr(64, 64);
+        const mu = BigInt('0x' + muhex);
+
+        const offset = 1;
+        const Ahex = str.substr(128 + offset, 64);
+        const Ax = BigInt('0x' + Ahex);
+        const Shex = str.substr(128 + offset + 64, 64);
+        const Sx = BigInt('0x' + Shex);
+        const T1hex = str.substr(128 + offset + 64 * 2, 64);
+        const T1x = BigInt('0x' + T1hex);
+        const T2hex = str.substr(128 + offset + 64 * 3, 64);
+        const T2x = BigInt('0x' + T2hex);
+
         return new CompressedBulletproof();
     }
 
@@ -75,12 +93,12 @@ class CompressedBulletproof extends RangeProof {
             throw new Error("Currenlty only range proofs from 0 to n are allowed");
         }
         // Generator H
-        const H = Utils.getnewGenFromHashingGen(this.G);
+        const H = constants.gens.H;
 
         const T1 = this.T.clone();
 
         // Orthogonal generator B
-        const B = Utils.getnewGenFromHashingGen(H);
+        const B = constants.gens.B;
         // Indeterminate variable w
         const w = Utils.getFiatShamirChallengeTranscript(T1, this.order);
         const wBN = Utils.toBN(w);

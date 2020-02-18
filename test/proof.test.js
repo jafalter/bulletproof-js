@@ -11,7 +11,8 @@ const CompressedBulletproof = require('../src/CompressedBulletproof');
 const Utils = require('../src/Utils');
 const Maths = require('../src/Maths');
 const BigIntVector = require('../src/BigIntVector');
-const secp256k1 = require('../src/Constants').secp256k1;
+const constants = require('../src/Constants');
+const secp256k1 = constants.secp256k1;
 
 const fixtures_dir = path.join(__dirname, 'fixtures');
 const serUncProof = fs.readFileSync( fixtures_dir+ '/uncompressed_proof.json', 'utf-8');
@@ -36,7 +37,7 @@ describe('Tests for the rangeproof', () => {
         // Curve generator
         const G = ec.g;
         // Orthogonal generator
-        const H = Utils.getnewGenFromHashingGen(G);
+        const H =  constants.gens.H;
         // Pedersen Commitment to our value
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
@@ -51,7 +52,7 @@ describe('Tests for the rangeproof', () => {
         const upper = 64n;
 
         const G = ec.g;
-        const H = Utils.getnewGenFromHashingGen(G);
+        const H = constants.gens.H;
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
@@ -67,7 +68,7 @@ describe('Tests for the rangeproof', () => {
         const upper = 64n;
 
         const G = ec.g;
-        const H = Utils.getnewGenFromHashingGen(G);
+        const H = constants.gens.H;
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         let error = null;
@@ -86,7 +87,7 @@ describe('Tests for the rangeproof', () => {
         const val = (2n ** upper) + 1n;
 
         const G = ec.g;
-        const H = Utils.getnewGenFromHashingGen(G);
+        const H = constants.gens.H;
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         let error = null;
@@ -127,8 +128,8 @@ describe('Tests for the rangeproof', () => {
 
         const order = secp256k1.n;
         const G = ec.g;
-        const H = Utils.getnewGenFromHashingGen(G);
-        const B = Utils.getnewGenFromHashingGen(H);
+        const H = constants.gens.H;
+        const B = constants.gens.B;
 
         const w = 2n;
         const wBN = Utils.toBN(w);

@@ -2,6 +2,7 @@ const EC = require('elliptic').ec;
 const assert = require('assert');
 const cryptoutils = require('bigint-crypto-utils');
 
+const constants = require('./Constants');
 const RangeProof = require('./RangeProof');
 const PointVector = require('./PointVector');
 const Utils = require('./Utils');
@@ -137,7 +138,7 @@ class UncompressedBulletproof extends RangeProof {
         }
         // Generator H
         const G = this.G;
-        const H = Utils.getnewGenFromHashingGen(this.G);
+        const H = constants.gens.H;
 
         // First we calculate the challenges y, z, x by using Fiat Shamir
         const y = this.y;
@@ -195,7 +196,7 @@ class UncompressedBulletproof extends RangeProof {
     compressProof(doAssert = false) {
         const G = this.G;
         const n = this.order;
-        const H = Utils.getnewGenFromHashingGen(G);
+        const H = constants.gens.H;
 
         const a = this.lx.clone();
         const b = this.rx.clone();
@@ -207,7 +208,7 @@ class UncompressedBulletproof extends RangeProof {
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
         // Orthogonal generator B
-        const B = Utils.getnewGenFromHashingGen(H);
+        const B = constants.gens.B;
         // Indeterminate variable w
         const w = Utils.getFiatShamirChallengeTranscript(this.T, n);
         const wBN = Utils.toBN(w);

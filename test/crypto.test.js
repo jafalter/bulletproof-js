@@ -7,7 +7,8 @@ const cryptoutils = require('bigint-crypto-utils');
 const Utils = require('../src/Utils');
 const Maths = require('../src/Maths');
 const BigIntVector = require('../src/BigIntVector');
-const secp256k1 = require('../src/Constants').secp256k1;
+const constants = require('../src/Constants');
+const secp256k1 = constants.secp256k1;
 const PointVector = require('../src/PointVector');
 
 const fixtures_dir = path.join(__dirname, 'fixtures');
@@ -30,6 +31,11 @@ describe('Tests for some of the crypto stuff', () => {
         const vecG3 = vecG2.multWithBigIntVector(vec);
         assert(G.eq(vecG3.get(0)));
         assert(G.eq(vecG3.get(1)));
+    });
+
+    it('sha256 of G should be the same H as used in libsec', () => {
+        const H = constants.gens.H;
+        assert(H.encode('hex') === '0450929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac031d3c6863973926e049e637cb1b5f40a36dac28af1766968c30c2313f3a38904');
     });
 
     it('Test for substraction on points', () => {
