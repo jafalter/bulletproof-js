@@ -50,11 +50,11 @@ length two instead of length one. This is because every round creates two commit
 `ed9e1ee8cb2db1e71311cacd9e1d0b6dbf6cfab15723ec3cac4cc52154fc9d53 (107477520278964342277912932357487306000871347661927764278313323679782451060051)` b2
 
 And last we have the commitments Li and Ri of every round. In Grin we have 64-bit range proofs. This means we have six rounds (log(64) = 6); however, since we stop early, we only do five rounds, so 10 points instead of 12. The implementation always computes L before R. (*inner_product_impl.h 627*)
-Again we have an offset in which we specify how to recover y values. Now since we have more than eight points we need two bytes offset. (*inner_product_impl.h 839*)
+Again we have an offset in which we specify how to recover y values. Now since we have more than eight points we need two bytes offset. When reconstructing we first check the bits of the first byte though. (*inner_product_impl.h 839*)
 
 `2202` offset
 
-`0010 0010 0000 0010` offset in binary
+`0010 0010` first offset byte (binary) `0000 0010` second offset byte (binary)
 
 `02a085238e756ad1fa804cce2a634decc1b348f6ff939f9f80187d85aa5c308224` L1
 
@@ -66,7 +66,7 @@ Again we have an offset in which we specify how to recover y values. Now since w
 
 `029ae84d00eb0cb34b4063bb55a83b9fe52604e545adcd41beb6ce14cdff73a21b` L3
 
-`02eb7493fa443a34585b7d2927f608cad17aa5f0e8e154b14d35315f63dd3580e8` R3
+`03eb7493fa443a34585b7d2927f608cad17aa5f0e8e154b14d35315f63dd3580e8` R3
 
 `020d06d8be4039f58778967f7bf2cdd9020fbcc9fed799b8159814f6a261c568e8` L4
 

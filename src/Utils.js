@@ -2,6 +2,7 @@ const sha256 = require('js-sha256').sha256;
 const EC = require('elliptic').ec;
 const BN = require('bn.js');
 
+const constants = require('./Constants');
 const Maths = require('./Maths');
 
 const ec = new EC('secp256k1');
@@ -9,14 +10,21 @@ const ec = new EC('secp256k1');
 class Utils {
 
     /**
-     * Get elliptic curve point from a hexadecimal encoded
-     * scalar
+     * Try to coerce a scalar x to a curve point
+     * meaning we try to find a y to the x.
+     *
+     * Notice that this can easily fail
      *
      * @param hex {string}
      * @return {Point}
+     * @throws {Error} if not point was found
      */
     static scalarToPoint(hex) {
-        return ec.keyFromPrivate(hex, 'hex').getPublic();
+        try {
+            return ec.keyFromPublic('02' + hex, 'hex').pub;
+        } catch (e) {
+            return ec.keyFromPublic('03' + hex, 'hex').pub;
+        }
     }
 
     /**
@@ -68,14 +76,26 @@ class Utils {
     }
 
     /**
-     * Get a new generator point by sha256 hashing G
+     * Get a new orthogonal generator point by sha256 hashing a generator
+     * This should not be done during proof creation or verification
+     * use the constants
      *
      * @param G {Point}
      * @return {Point}
      */
     static getnewGenFromHashingGen(G) {
-        const hashedG = Utils.sha256pointtohex(G);
-        return  Utils.scalarToPoint(hashedG);
+        let hashedG = Utils.sha256pointtohex(G);
+        let point = null;
+        while (point === null ) {
+            try {
+                point = Utils.scalarToPoint(hashedG);
+            } catch (e) {
+                //
+                hashedG = (BigInt('0x' + hashedG) + constants.essentials.FIXED_INC).toString(16);
+            }
+        }
+        console.log("Found a point " + point.encode('hex'));
+        return point;
     }
 
     /**
@@ -100,7 +120,7 @@ class Utils {
     static getPedersenCommitment(v, x, n=false, H=false) {
         const G = ec.g;
         if( !H ) {
-            H = Utils.getnewGenFromHashingGen(G);
+            H = constants.gens.H;
         }
         const x_BN = Utils.toBN(n ? Maths.mod(x, n) : x);
         const v_BN = Utils.toBN(n ? Maths.mod(v, n) : x);
@@ -120,7 +140,7 @@ class Utils {
     static getVectorPedersenCommitment(l, r, x, n=false, H=false) {
         const G = ec.g;
         if( !H ) {
-            H = Utils.getnewGenFromHashingGen(G);
+            H = constants.gens.H;
         }
         const P1 = l.multVectorWithPointToPoint(G);
         const P2 = r.multVectorWithPointToPoint(H);

@@ -63,7 +63,8 @@ const cryptoutils = require('bigint-crypto-utils');
 
 const ProofFactory = bulletproofs.ProofFactory;
 const ProofUtils = bulletproofs.ProofUtils;
-const secp256k1 = bulletproofs.Constants.secp256k1;
+const constants = bulletproofs.Constants;
+const secp256k1 = constants.secp256k1;
 const ec = new EC('secp256k1');
 
 // Random blinding factor
@@ -79,7 +80,7 @@ const upper = 64n;
 // Generator
 const G = ec.g;
 // Orthogonal Generator
-const H = ProofUtils.getnewGenFromHashingGen(G);
+const H = constants.gens.H;
 // Pedersen Commitment to our amount
 const V = ProofUtils.getPedersenCommitment(a, x, secp256k1.n, H);
 

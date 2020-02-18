@@ -1,6 +1,8 @@
 const cryptoutils = require('bigint-crypto-utils');
+
 var EC = require('elliptic').ec;
 
+const constants = require('./Constants');
 const RangeProof = require('./RangeProof');
 const PointVector = require('./PointVector');
 const Transcript = require('./Transcript');
@@ -91,12 +93,12 @@ class CompressedBulletproof extends RangeProof {
             throw new Error("Currenlty only range proofs from 0 to n are allowed");
         }
         // Generator H
-        const H = Utils.getnewGenFromHashingGen(this.G);
+        const H = constants.gens.H;
 
         const T1 = this.T.clone();
 
         // Orthogonal generator B
-        const B = Utils.getnewGenFromHashingGen(H);
+        const B = constants.gens.B;
         // Indeterminate variable w
         const w = Utils.getFiatShamirChallengeTranscript(T1, this.order);
         const wBN = Utils.toBN(w);
