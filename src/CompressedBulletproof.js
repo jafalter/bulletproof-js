@@ -53,13 +53,15 @@ class CompressedBulletproof extends RangeProof {
      * @param tx {BigInt} Polynomial t() evaluated with challenge x
      * @param txbf {BigInt} Opening blinding factor for t() to verify the correctness of t(x)
      * @param e {BigInt} Opening e of the combined blinding factors using in A and S to verify correctness of l(x) and r(x)
-     * @param a0 {BigInt} The single element in a after compressing the lx vector
-     * @param b0 {BigInt} The single element in b after compressing the rx vector
+     * @param a0 {BigInt} The first element of the end vector a
+     * @param b0 {BigInt} The first element of the end vector b
+     * @param a1 {BigInt} The second element of the end vector a
+     * @param b1 {BigInt} The second element of the end vector b
      * @param ind {{ L : Point, R : Point}[]} indeterminante variables
      * @param G {Point} Generator
      * @param order {BigInt} curve order
      */
-    constructor(A, S, T1, T2, tx, txbf, e, a0, b0, ind,G, order) {
+    constructor(A, S, T1, T2, tx, txbf, e, a0, b0, a1, b1, ind,G, order) {
         super();
         this.A = A;
         this.S = S;
@@ -68,8 +70,12 @@ class CompressedBulletproof extends RangeProof {
         this.tx = tx;
         this.txbf = txbf;
         this.e = e;
-        this.a0 = a0;
-        this.b0 = b0;
+        this.a = new BigIntVector(order);
+        this.b = new BigIntVector(order);
+        this.a.addElem(a0);
+        this.a.addElem(a1);
+        this.b.addElem(b0);
+        this.b.addElem(b1);
         this.ind = ind;
         this.G = G;
         this.order = order;
@@ -161,7 +167,7 @@ class CompressedBulletproof extends RangeProof {
         let Gsum = vecG.clone();
         let Hsum = vecH2.clone();
         let i = 0;
-        while (Gsum.length() > 1) {
+        while (Gsum.length() > constants.essentials.END_VECTOR_LENGTH) {
             const Ghi = new PointVector();
             const Glo = new PointVector();
             const Hhi = new PointVector();
@@ -205,14 +211,10 @@ class CompressedBulletproof extends RangeProof {
             const uj2invBN = Utils.toBN(uj2inv);
             det = det.add(Lj.mul(uj2BN)).add(Rj.mul(uj2invBN));
         }
-        const G0 = Gsum.get(0);
-        const H0 = Hsum.get(0);
-        const a0BN = Utils.toBN(this.a0);
-        const b0BN = Utils.toBN(this.b0);
-        const a0b0BN = Utils.toBN(Maths.mod(this.a0 * this.b0, this.order));
+        const a0b0BN = Utils.toBN(Maths.mod(this.a.multVector(this.b).toScalar(), this.order));
 
         const detinv = det.neg();
-        const rightSide = G0.mul(a0BN).add(H0.mul(b0BN)).add(Q.mul(a0b0BN)).add(detinv);
+        const rightSide = Gsum.multWithBigIntVector(this.a).toSinglePoint().add(Hsum.multWithBigIntVector(this.b).toSinglePoint()).add(Q.mul(a0b0BN)).add(detinv);
         return leftSide.eq(rightSide);
     }
 
@@ -271,6 +273,8 @@ class CompressedBulletproof extends RangeProof {
             BigInt(obj.e),
             BigInt(obj.a0),
             BigInt(obj.b0),
+            BigInt(obj.a1),
+            BigInt(obj.b1),
             intTerms,
             ec.keyFromPublic(obj.G, 'hex').pub,
             BigInt(obj.order)
@@ -294,8 +298,10 @@ class CompressedBulletproof extends RangeProof {
             tx : '0x' + this.tx.toString(16),
             txbf : '0x' + this.txbf.toString(16),
             e : '0x' + this.e.toString(16),
-            a0 : '0x' + this.a0.toString(16),
-            b0 : '0x' + this.b0.toString(16),
+            a0 : '0x' + this.a.get(0).toString(16),
+            b0 : '0x' + this.b.get(0).toString(16),
+            a1 : '0x' + this.a.get(1).toString(16),
+            b1 : '0x' + this.b.get(1).toString(16),
             ind : intTerms,
             G : this.G.encode('hex'),
             order : '0x' + this.order.toString(16)

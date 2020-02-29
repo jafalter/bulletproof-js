@@ -296,8 +296,9 @@ module.exports.gens = {
 /**
  * Other constants used throughout the library
  *
- * @type {{FIXED_INC: bigint}}
+ * @type {{END_VECTOR_LENGTH: number, FIXED_INC: bigint}}
  */
 module.exports.essentials = {
-    FIXED_INC : 142n
+    FIXED_INC : 142n,
+    END_VECTOR_LENGTH : 2
 };

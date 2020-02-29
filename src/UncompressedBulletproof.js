@@ -14,6 +14,10 @@ const ProofUtils = require('./ProofUtils');
 
 const ec = new EC('secp256k1');
 
+// We stop the inner product proof one round early
+// This way we spare 2 commitments
+const END_VECTOR_LENGTH = 2;
+
 /**
  * A bulletproof which can be verified or transformed into
  * a more compact InnerProductBulletproof
@@ -222,7 +226,7 @@ class UncompressedBulletproof extends RangeProof {
         const intermediateTerms = [];
         let first = true;
 
-        while (a_sum.length() > 1) {
+        while (a_sum.length() > constants.essentials.END_VECTOR_LENGTH) {
             const a_lo = new BigIntVector(n);
             const b_lo = new BigIntVector(n);
             const G_lo = new PointVector();
@@ -319,7 +323,7 @@ class UncompressedBulletproof extends RangeProof {
         const b0 = b_sum.get(0);
         const a0BN = Utils.toBN(a0);
         const b0BN = Utils.toBN(b0);
-        const c0 = Maths.mod(a0 * b0, n);
+        const c0 = Maths.mod(a_sum.multVector(b_sum).toScalar(), n);
         const c0BN = Utils.toBN(c0);
         if (doAssert) {
             const P_star = P.add(Q.mul(cBN));
@@ -345,7 +349,7 @@ class UncompressedBulletproof extends RangeProof {
             }
             const detinv = det.neg();
 
-            const P0 = G0.mul(a0BN).add(H0.mul(b0BN)).add(Q.mul(c0BN));
+            const P0 = G_sum.multWithBigIntVector(a_sum).toSinglePoint().add(H_sum.multWithBigIntVector(b_sum).toSinglePoint()).add(Q.mul(c0BN));
             assert(P_star.eq(P0.add(detinv)), 'What the verifier will check');
         }
         // Remove the u's from the intermediate Terms. Verifier will calculate themself
@@ -361,8 +365,10 @@ class UncompressedBulletproof extends RangeProof {
             this.tx,
             this.txbf,
             this.e,
-            a0,
-            b0,
+            a_sum.get(0),
+            b_sum.get(0),
+            a_sum.get(1),
+            b_sum.get(1),
             intermediateTerms,
             G,
             n
