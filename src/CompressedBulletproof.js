@@ -97,12 +97,10 @@ class CompressedBulletproof extends RangeProof {
 
         const T1 = this.T.clone();
 
-        // Orthogonal generator B
-        const B = constants.gens.B;
         // Indeterminate variable w
         const w = Utils.getFiatShamirChallengeTranscript(T1, this.order);
         const wBN = Utils.toBN(w);
-        const Q = B.mul(wBN);
+        const Q = this.G.mul(wBN);
 
         const y = this.y;
         const z = this.z;

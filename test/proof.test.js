@@ -138,11 +138,10 @@ describe('Tests for the rangeproof', () => {
         const order = secp256k1.n;
         const G = ec.g;
         const H = constants.gens.H;
-        const B = constants.gens.B;
 
         const w = 2n;
         const wBN = Utils.toBN(w);
-        const Q = B.mul(wBN);
+        const Q = G.mul(wBN);
 
         const Gs = BigIntVector.getVectorWithOnlyScalar(1n, 4, order);
         const Hs = BigIntVector.getVectorWithOnlyScalar(1n, 4, order);

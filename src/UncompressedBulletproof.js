@@ -207,8 +207,6 @@ class UncompressedBulletproof extends RangeProof {
         const y_ninv = BigIntVector.getVectorToPowerModInvN(this.y, BigInt(len), n);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
-        // Orthogonal generator B
-        const B = constants.gens.B;
         // Indeterminate variable w
         const w = Utils.getFiatShamirChallengeTranscript(this.T, n);
         const wBN = Utils.toBN(w);
@@ -216,7 +214,7 @@ class UncompressedBulletproof extends RangeProof {
         const P = vecG.multWithBigIntVector(a).toSinglePoint().add(vecH2.multWithBigIntVector(b).toSinglePoint());
         const c = a.multVectorToScalar(b);
         const cBN = Utils.toBN(c);
-        const Q = B.mul(wBN);
+        const Q = G.mul(wBN);
 
         /* Now we need k iterations to half the vectors
            until we arrive at single element vectors
