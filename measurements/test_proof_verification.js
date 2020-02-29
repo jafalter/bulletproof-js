@@ -21,6 +21,6 @@ const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n, false);
 const compr = prf.compressProof(false);
 const t0 = performance.now();
-compr.verify(0n, 64n);
+compr.verify( V,0n, 64n);
 const t1 = performance.now();
 console.log("Verification of compressed proof took " + (t1 - t0) + " milliseconds");

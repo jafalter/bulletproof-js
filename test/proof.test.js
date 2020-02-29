@@ -42,7 +42,7 @@ describe('Tests for the rangeproof', () => {
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
-        assert(prf.verify(low, upper));
+        assert(prf.verify(V, low, upper));
     }).timeout(testTimeout);
 
     it('Should create an uncompressed Bulletproof serialize and deserialize correctly', () => {
@@ -111,17 +111,35 @@ describe('Tests for the rangeproof', () => {
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
         const compr = prf.compressProof(true);
-        assert(compr.verify(0n, 64n));
+        assert(compr.verify(V, 0n, 64n));
     }).timeout(testTimeout);
 
     it('Should fail when verifing a uncompressed proof with invalid ranges', () => {
-        const prf = UncompressedBulletproof.fromJsonString(serUncProof);
-        assert(!prf.verify(0n, 63n));
+        const x = 1897278917812981289198n;
+        const val = 25n;
+        const low = 0n;
+        const upper = 64n;
+
+        const G = ec.g;
+        const H = constants.gens.H;
+        const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
+
+        const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
+        assert(!prf.verify(V,0n, 63n));
     }).timeout(testTimeout);
 
     it('Should fail when verifing a compressed proof with invalid ranges', () => {
-        const prf = CompressedBulletproof.fromJsonString(serComProof);
-        assert(!prf.verify(0n, 63n));
+        const x = 1897278917812981289198n;
+        const val = 25n;
+        const low = 0n;
+        const upper = 64n;
+
+        const G = ec.g;
+        const H = constants.gens.H;
+        const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
+
+        const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
+        assert(!prf.verify(V,0n, 63n));
     }).timeout(testTimeout);
 
     it('Should serialize and deserialize a compressed proof correctly', () => {

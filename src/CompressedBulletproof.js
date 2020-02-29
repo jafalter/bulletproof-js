@@ -46,7 +46,6 @@ class CompressedBulletproof extends RangeProof {
 
     /**
      *
-     * @param V {Point} Pedersen commitment for which the range is proven
      * @param A {Point} Vector pedersen commitment committing to a_L and a_R the amount split into a vector which is the amount in binary and a vector containing exponents of 2
      * @param S {Point} Vector pedersen commitment committing to s_L and s_R the blinding vectors
      * @param T1 {Point} Pedersen commitment to tx
@@ -60,9 +59,8 @@ class CompressedBulletproof extends RangeProof {
      * @param G {Point} Generator
      * @param order {BigInt} curve order
      */
-    constructor(V, A, S, T1, T2, tx, txbf, e, a0, b0, ind,G, order) {
+    constructor(A, S, T1, T2, tx, txbf, e, a0, b0, ind,G, order) {
         super();
-        this.V = V;
         this.A = A;
         this.S = S;
         this.T1 = T1;
@@ -88,7 +86,7 @@ class CompressedBulletproof extends RangeProof {
         this.x = Utils.getFiatShamirChallengeTranscript(this.T, this.order);
     }
 
-    verify(low, up) {
+    verify(V, low, up) {
         if(low !== 0n ) {
             throw new Error("Currenlty only range proofs from 0 to n are allowed");
         }
@@ -112,7 +110,7 @@ class CompressedBulletproof extends RangeProof {
         const xsq = Maths.mod(x ** 2n, this.order);
 
         const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, H);
-        const rightEq = this.V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
+        const rightEq = V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
         if( leftEq.eq(rightEq) === false ) { return false; }
 
         // Now prove validity of lx and rx
@@ -232,8 +230,7 @@ class CompressedBulletproof extends RangeProof {
                 return false;
             }
         }
-        return this.V.eq(e.V) &&
-            this.A.eq(e.A) &&
+        return this.A.eq(e.A) &&
             this.S.eq(e.S) &&
             this.T1.eq(e.T1) &&
             this.T2.eq(e.T2) &&
@@ -265,7 +262,6 @@ class CompressedBulletproof extends RangeProof {
         }
 
         return new CompressedBulletproof(
-            ec.keyFromPublic(obj.V, 'hex').pub,
             ec.keyFromPublic(obj.A, 'hex').pub,
             ec.keyFromPublic(obj.S, 'hex').pub,
             ec.keyFromPublic(obj.T1, 'hex').pub,
@@ -291,7 +287,6 @@ class CompressedBulletproof extends RangeProof {
         }
 
         const obj = {
-            V : this.V.encode('hex'),
             A : this.A.encode('hex'),
             S : this.S.encode('hex'),
             T1 : this.T1.encode('hex'),

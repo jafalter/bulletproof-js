@@ -276,7 +276,7 @@ class ProofFactory {
             assert(P1.eq(P2), 'What the verifier checks to verify that l(x) and r(x) are correct');
             assert(P.eq(P1));
         }
-        return new UncompressedBulletproof(V, A, S, T1, T2, tx, tx_bf, e, l(x), r(x), G, order);
+        return new UncompressedBulletproof(A, S, T1, T2, tx, tx_bf, e, l(x), r(x), G, order);
     }
 }
 
