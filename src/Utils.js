@@ -128,6 +128,57 @@ class Utils {
     }
 
     /**
+     * @param bint {BigInt}
+     * @return {string}
+     */
+    static encodeBigIntScalar(bint) {
+        return bint.toString(16).padStart(64, '0');
+    }
+
+    /**
+     * Encode points how it is done in libsec with the offset byte
+     *
+     * @param points Point[]
+     */
+    static encodePoints(points) {
+        let output = "";
+        const offsets = [];
+        const nmbrOffsets = Math.ceil(points.length / 8);
+        for ( let i = 0; i < nmbrOffsets; i++ ) {
+            offsets.push([0,0,0,0,0,0,0,0]);
+        }
+        let offsetindex = 0;
+        let offset = offsets[offsetindex];
+        let counter = 0;
+        for ( let j = 0; j < points.length; j++ ) {
+            if( counter >= 8 ) {
+                counter = 0;
+                offsetindex++;
+                offset = offsets[offsetindex];
+            }
+            const p = points[j];
+            // Check the last bit of y
+            const neg = !(BigInt(p.y.toString()) % 2n === 0n);
+            if( neg ) {
+                const ix = 7 - Maths.mod(j, 8);
+                offset[ix] = 1;
+            }
+            counter++;
+            output += this.encodeBigIntScalar(BigInt('0x' + p.x.toString(16)));
+        }
+        // Prepend the offset bytes
+        let offsetStr = "";
+        for( let o of offsets ) {
+            const joined = o.join('');
+            const b1 = parseInt(joined.substr(0,4), 2);
+            const b2 = parseInt(joined.substr(4,4), 2);
+            offsetStr += b1.toString(16);
+            offsetStr += b2.toString(16);
+        }
+        return offsetStr + output;
+    }
+
+    /**
      * Generate a Vector Pedersen Commitment with blinding factor x
      *
      * @param l {Vector} Vector 1

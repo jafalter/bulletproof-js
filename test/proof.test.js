@@ -150,6 +150,52 @@ describe('Tests for the rangeproof', () => {
         compr.equals(des);
     }).timeout(testTimeout);
 
+    it('Should test point serialization', () => {
+        const G = ec.g;
+        const H = constants.gens.H;
+        const V1 = Utils.getPedersenCommitment(89719823n, 8912738912n, secp256k1.n, H);
+        const V2 = Utils.getPedersenCommitment(5452823n, 8912724n, secp256k1.n, H);
+        const V3 = Utils.getPedersenCommitment(89231823n, 8912738912n, secp256k1.n, H);
+        const V4 = Utils.getPedersenCommitment(89719122n, 112n, secp256k1.n, H);
+        const bytes = Utils.encodePoints([V1,V2,V3,V4]);
+        const offShouldBe = '0' + parseInt("1110", 2).toString(16);
+        assert(bytes.length === 258);
+        assert(bytes.substr(0,2) === offShouldBe);
+    });
+
+    it('Should test point serialization with more then 8 points', () => {
+        const G = ec.g;
+        const H = constants.gens.H;
+        const V1 = Utils.getPedersenCommitment(89719823n, 8912738912n, secp256k1.n, H);
+        const V2 = Utils.getPedersenCommitment(5452823n, 8912724n, secp256k1.n, H);
+        const V3 = Utils.getPedersenCommitment(89231823n, 8912738912n, secp256k1.n, H);
+        const V4 = Utils.getPedersenCommitment(89719122n, 112n, secp256k1.n, H);
+        const V5 = Utils.getPedersenCommitment(89719823n, 8912738912n, secp256k1.n, H);
+        const V6 = Utils.getPedersenCommitment(5452823n, 8912724n, secp256k1.n, H);
+        const V7 = Utils.getPedersenCommitment(89231823n, 8912738912n, secp256k1.n, H);
+        const V8 = Utils.getPedersenCommitment(89719122n, 112n, secp256k1.n, H);
+        const V9 = Utils.getPedersenCommitment(5452823n, 8912724n, secp256k1.n, H);
+        const bytes = Utils.encodePoints([V1,V2,V3,V4,V5,V6,V7,V8,V9]);
+        assert(bytes.length === 64 * 9 + 4);
+        assert(bytes.substr(0,4) === 'ee01');
+    });
+
+    it('Should serialize a compressed proof correctly to bytes', () => {
+        const x = 1897278917812981289198n;
+        const val = 25n;
+        const low = 0n;
+        const upper = 64n;
+
+        const G = ec.g;
+        const H = constants.gens.H;
+        const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
+
+        const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
+        const compr = prf.compressProof(true);
+        const byteString = compr.toBytes();
+        assert(byteString.length === 1350);
+    }).timeout(testTimeout);
+
     it('Should test the basis of the inner product compression', () => {
         // Setup
 

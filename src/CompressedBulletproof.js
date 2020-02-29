@@ -16,6 +16,42 @@ const ec = new EC('secp256k1');
 class CompressedBulletproof extends RangeProof {
 
     /**
+     * Get CompressedBulletproof from serialzed
+     * json string
+     *
+     * @param str {string}
+     * @return {CompressedBulletproof}
+     */
+    static fromJsonString(str) {
+        const obj = JSON.parse(str);
+
+        const intTerms = [];
+        for( let intT of obj.ind ) {
+            intTerms.push({
+                L : ec.keyFromPublic(intT.L, 'hex').pub,
+                R : ec.keyFromPublic(intT.R, 'hex').pub,
+            });
+        }
+
+        return new CompressedBulletproof(
+            ec.keyFromPublic(obj.A, 'hex').pub,
+            ec.keyFromPublic(obj.S, 'hex').pub,
+            ec.keyFromPublic(obj.T1, 'hex').pub,
+            ec.keyFromPublic(obj.T2, 'hex').pub,
+            BigInt(obj.tx),
+            BigInt(obj.txbf),
+            BigInt(obj.e),
+            BigInt(obj.a0),
+            BigInt(obj.b0),
+            BigInt(obj.a1),
+            BigInt(obj.b1),
+            intTerms,
+            ec.keyFromPublic(obj.G, 'hex').pub,
+            BigInt(obj.order)
+        );
+    }
+
+    /**
      * Create an instance of CompressedBulletproof from a hex
      * encoded string (compatible with secp256k1-zkp)
      *
@@ -25,7 +61,7 @@ class CompressedBulletproof extends RangeProof {
      *
      * @return {CompressedBulletproof}
      */
-    static fromHexString(str) {
+    static fromByteString(str) {
         const tauhex = str.substr(0,64);
         const tau = BigInt('0x' + tauhex);
         const muhex = str.substr(64, 64);
@@ -245,42 +281,6 @@ class CompressedBulletproof extends RangeProof {
             this.order === e.order;
     }
 
-    /**
-     * Get CompressedBulletproof from serialzed
-     * json string
-     *
-     * @param str {string}
-     * @return {CompressedBulletproof}
-     */
-    static fromJsonString(str) {
-        const obj = JSON.parse(str);
-
-        const intTerms = [];
-        for( let intT of obj.ind ) {
-            intTerms.push({
-                L : ec.keyFromPublic(intT.L, 'hex').pub,
-                R : ec.keyFromPublic(intT.R, 'hex').pub,
-            });
-        }
-
-        return new CompressedBulletproof(
-            ec.keyFromPublic(obj.A, 'hex').pub,
-            ec.keyFromPublic(obj.S, 'hex').pub,
-            ec.keyFromPublic(obj.T1, 'hex').pub,
-            ec.keyFromPublic(obj.T2, 'hex').pub,
-            BigInt(obj.tx),
-            BigInt(obj.txbf),
-            BigInt(obj.e),
-            BigInt(obj.a0),
-            BigInt(obj.b0),
-            BigInt(obj.a1),
-            BigInt(obj.b1),
-            intTerms,
-            ec.keyFromPublic(obj.G, 'hex').pub,
-            BigInt(obj.order)
-        );
-    }
-
     toJson(pp=false) {
         const intTerms = [];
         for( let intT of this.ind ) {
@@ -310,15 +310,28 @@ class CompressedBulletproof extends RangeProof {
         return pp ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
     }
 
-    /**
-     * Structure as given in secp256k1-zkp
-     * t, tau_x, mu, a, b, A, S, T_1, T_2, {L_i}, {R_i}
-     *               5 scalar + [4 + 2log(n)] ge
-     *
-     * t
-     *
-     */
     toBytes() {
+        // First we have tx and tx_bf (negate?)
+        let byteString = "";
+        byteString += Utils.encodeBigIntScalar(this.tx);
+        byteString += Utils.encodeBigIntScalar(this.txbf);
+        // Now we encode commitments A,S,T1,T2
+        byteString += Utils.encodePoints([this.A, this.S, this.T1, this.T2]);
+        // e scalar
+        byteString += Utils.encodeBigIntScalar(this.e);
+        // End vector elements
+        byteString += Utils.encodeBigIntScalar(this.a.get(0));
+        byteString += Utils.encodeBigIntScalar(this.b.get(0));
+        byteString += Utils.encodeBigIntScalar(this.a.get(1));
+        byteString += Utils.encodeBigIntScalar(this.b.get(1))
+        // Li, Ri
+        const points = [];
+        for( let elems of this.ind ) {
+            points.push(elems.L);
+            points.push(elems.R);
+        }
+        byteString += Utils.encodePoints(points);
+        return byteString
     }
 }
 

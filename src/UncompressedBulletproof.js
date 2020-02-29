@@ -317,12 +317,6 @@ class UncompressedBulletproof extends RangeProof {
             }
             first = false;
         }
-        const G0 = G_sum.get(0);
-        const H0 = H_sum.get(0);
-        const a0 = a_sum.get(0);
-        const b0 = b_sum.get(0);
-        const a0BN = Utils.toBN(a0);
-        const b0BN = Utils.toBN(b0);
         const c0 = Maths.mod(a_sum.multVector(b_sum).toScalar(), n);
         const c0BN = Utils.toBN(c0);
         if (doAssert) {
