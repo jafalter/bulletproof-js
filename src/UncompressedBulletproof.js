@@ -164,8 +164,8 @@ class UncompressedBulletproof extends RangeProof {
 
         // Now prove validity of lx and rx
         const y_ninv = BigIntVector.getVectorToPowerModInvN(y, up, this.order);
-        const vecH = PointVector.getVectorOfPoint(H, up);
-        const vecG = PointVector.getVectorOfPoint(G, up);
+        const vecH = PointVector.getVectorShallueVanDeWoestijne('H', up);
+        const vecG = PointVector.getVectorShallueVanDeWoestijne('G', up);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
         const E = H.mul(Utils.toBN(this.e));
@@ -202,8 +202,8 @@ class UncompressedBulletproof extends RangeProof {
         const b = this.rx.clone();
         const len = a.length();
 
-        const vecG = PointVector.getVectorOfPoint(G, len);
-        const vecH = PointVector.getVectorOfPoint(H, len);
+        const vecG = PointVector.getVectorShallueVanDeWoestijne('G', len);
+        const vecH = PointVector.getVectorShallueVanDeWoestijne('H', len);
         const y_ninv = BigIntVector.getVectorToPowerModInvN(this.y, BigInt(len), n);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 

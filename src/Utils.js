@@ -132,18 +132,20 @@ class Utils {
      *
      * @param l {Vector} Vector 1
      * @param r {Vector} Vector 2
+     * @param vecG {PointVector} G vector
+     * @param vecH {PointVector} H vector
      * @param x {BigInt} blinding factor
      * @param n {BigInt} optional group order
      * @param H {Point} second Generator (If non provided we sha256 hash G)
      * @return {Point}
      */
-    static getVectorPedersenCommitment(l, r, x, n=false, H=false) {
+    static getVectorPedersenCommitment(l, r, vecG, vecH, x, n=false, H=false) {
         const G = ec.g;
         if( !H ) {
             H = constants.gens.H;
         }
-        const P1 = l.multVectorWithPointToPoint(G);
-        const P2 = r.multVectorWithPointToPoint(H);
+        const P1 = vecG.multWithBigIntVector(l).toSinglePoint();
+        const P2 = vecH.multWithBigIntVector(r).toSinglePoint();
         const B = H.mul(Utils.toBN(x));
         return P1.add(P2).add(B);
     }

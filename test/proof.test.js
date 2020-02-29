@@ -100,7 +100,16 @@ describe('Tests for the rangeproof', () => {
     });
 
     it('Should compress the UncompressedBulletproof into a compressed one, which should verify', () => {
-        const prf = UncompressedBulletproof.fromJsonString(serUncProof);
+        const x = 1897278917812981289198n;
+        const val = 25n;
+        const low = 0n;
+        const upper = 64n;
+
+        const G = ec.g;
+        const H = constants.gens.H;
+        const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
+
+        const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
         const compr = prf.compressProof(true);
         assert(compr.verify(0n, 64n));
     }).timeout(testTimeout);

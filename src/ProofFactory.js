@@ -1,6 +1,7 @@
 const assert = require('assert');
 
 const Utils = require('./Utils');
+const Constants = require('./Constants');
 const Transcript = require('./Transcript');
 const PointVector = require('./PointVector');
 const BigIntVector = require('./BigIntVector');
@@ -79,9 +80,11 @@ class ProofFactory {
         // To match notation with reference
         const a_L = vec1;
         const a_R = vec1.subScalar(1n);
+        const vecG = PointVector.getVectorShallueVanDeWoestijne('G', upper);
+        const vecH = PointVector.getVectorShallueVanDeWoestijne('H', upper);
         // Commit to those values in a pedersen commitment (is needed later)
         const a_bf = randomNum(order);
-        const A = Utils.getVectorPedersenCommitment(a_L, a_R, a_bf, order, H);
+        const A = Utils.getVectorPedersenCommitment(a_L, a_R, vecG, vecH, a_bf, order, H);
         T.addPoint(A);
         if( doAssert ) assert(a_L.multVectorToScalar(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
 
@@ -114,7 +117,7 @@ class ProofFactory {
         }
         // We need to commit to s_L and s_R
         const s_bf = randomNum(order);
-        const S = Utils.getVectorPedersenCommitment(s_L, s_R, s_bf, order, H);
+        const S = Utils.getVectorPedersenCommitment(s_L, s_R, vecG, vecH, s_bf, order, H);
         T.addPoint(S);
 
         const y = Utils.getFiatShamirChallengeTranscript(T, order);
@@ -251,8 +254,10 @@ class ProofFactory {
 
         if( doAssert ) {
             // transmutating the generator H such that we can verify r(x)
-            const vecH = PointVector.getVectorOfPoint(H, y_n.length());
-            const vecG = PointVector.getVectorOfPoint(G, y_n.length());
+            const vecG = PointVector.getVectorShallueVanDeWoestijne('G', y_n.length());
+            const vecH = PointVector.getVectorShallueVanDeWoestijne('H', y_n.length());
+            /*const vecG = PointVector.getVectorOfPoint(G, y_n.length());
+            const vecH = PointVector.getVectorOfPoint(H, y_n.length());*/
             const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
             // Final verification

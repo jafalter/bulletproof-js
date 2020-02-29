@@ -1,5 +1,6 @@
 const Vector = require('./Vector');
 const Utils = require('./Utils');
+const Constants = require('./Constants');
 
 class PointVector extends Vector {
 
@@ -12,6 +13,25 @@ class PointVector extends Vector {
         const v = new PointVector();
         for(let i = 0; i < len; i++) {
             v.addElem(p);
+        }
+        return v;
+    }
+
+    /**
+     *
+     * @param type {string} either G or H
+     * @param len {string} length of the vector
+     * @return {PointVector}
+     */
+    static getVectorShallueVanDeWoestijne(type, len) {
+        const v = new PointVector();
+        for(let i = 0; i < len; i++) {
+            if( type.toUpperCase() === "G" ) {
+                v.addElem(Constants.gens.arrG[i]);
+            }
+            else {
+                v.addElem(Constants.gens.arrH[i]);
+            }
         }
         return v;
     }

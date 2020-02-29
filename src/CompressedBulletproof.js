@@ -120,8 +120,8 @@ class CompressedBulletproof extends RangeProof {
         // Now prove validity of lx and rx
         // Now prove validity of lx and rx
         const y_ninv = BigIntVector.getVectorToPowerModInvN( y, up, this.order);
-        const vecH = PointVector.getVectorOfPoint(H, up);
-        const vecG = PointVector.getVectorOfPoint(this.G, up);
+        const vecG = PointVector.getVectorShallueVanDeWoestijne('G', up);
+        const vecH = PointVector.getVectorShallueVanDeWoestijne("H", up);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
         const E = H.mul(Utils.toBN(this.e));
