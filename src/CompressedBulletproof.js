@@ -12,6 +12,7 @@ const BigIntVector = require('./BigIntVector');
 const ProofUtils = require('./ProofUtils');
 
 const ec = new EC('secp256k1');
+const secp256k1 = constants.secp256k1;
 
 class CompressedBulletproof extends RangeProof {
 
@@ -56,28 +57,92 @@ class CompressedBulletproof extends RangeProof {
      * encoded string (compatible with secp256k1-zkp)
      *
      * @param str {string}
-     * secp256k1-zkp Proof format: t, tau_x, mu, a, b, A, S, T_1, T_2, {L_i}, {R_i}
-     *               5 scalar + [4 + 2log(n)] ge
+     * @param nmbrRounds {int} the number of inner product rounds
      *
      * @return {CompressedBulletproof}
      */
-    static fromByteString(str) {
+    static fromByteString(str, nmbrRounds) {
+        // First we parse two 32 byte scalars
         const tauhex = str.substr(0,64);
         const tau = BigInt('0x' + tauhex);
         const muhex = str.substr(64, 64);
         const mu = BigInt('0x' + muhex);
 
-        const offset = 1;
-        const Ahex = str.substr(128 + offset, 64);
-        const Ax = BigInt('0x' + Ahex);
-        const Shex = str.substr(128 + offset + 64, 64);
-        const Sx = BigInt('0x' + Shex);
-        const T1hex = str.substr(128 + offset + 64 * 2, 64);
-        const T1x = BigInt('0x' + T1hex);
-        const T2hex = str.substr(128 + offset + 64 * 3, 64);
-        const T2x = BigInt('0x' + T2hex);
+        // Now we parse the points A, S, T1 and T2 with one byte offset
+        const offset = str.substr(128, 2);
+        let binoffset = parseInt(offset, 16).toString(2);
+        binoffset = binoffset.padStart(8, '0');
 
-        return new CompressedBulletproof();
+        const Ahex = str.substr(128 + 2, 64);
+        const Aflag = binoffset.charAt(7) === '1' ? '03' : '02';
+        const Acompr = Aflag + Ahex;
+        const A = ec.keyFromPublic(Acompr, 'hex').pub;
+
+        const Shex = str.substr(128 + 2 + 64, 64);
+        const Sflag = binoffset.charAt(6) === '1' ? '03' : '02';
+        const Scompr = Sflag + Shex;
+        const S = ec.keyFromPublic(Scompr, 'hex').pub;
+
+        const T1hex = str.substr(128 + 2 + 64 * 2, 64);
+        const T1flag = binoffset.charAt(5) === '1' ? '03' : '02';
+        const T1compr = T1flag + T1hex;
+        const T1 = ec.keyFromPublic(T1compr, 'hex').pub;
+
+        const T2hex = str.substr(128 + 2 + 64 * 3, 64);
+        const T2flag = binoffset.charAt(4) === '1' ? '03' : '02';
+        const T2compr = T2flag + T2hex;
+        const T2 = ec.keyFromPublic(T2compr, 'hex').pub;
+
+        // Now parse the dot product
+        const dothex = str.substr(128 + 2 + 64*4, 64);
+        const dot = BigInt('0x' + dothex);
+
+        // Now parse the end vectors
+        const a0hex = str.substr(128 + 2 + 64*4 + 64, 64);
+        const b0hex = str.substr(128 + 2 + 64*4 + 64 + 64, 64);
+        const a1hex = str.substr(128 + 2 + 64*4 + 64 + 64*2, 64);
+        const b1hex = str.substr(128 + 2 + 64*4 + 64 + 64*3, 64);
+        const a0 = BigInt('0x' + a0hex);
+        const b0 = BigInt('0x' + b0hex);
+        const a1 = BigInt('0x' + a1hex);
+        const b1 = BigInt('0x' + b1hex);
+
+        // Now we parse the commitments of the inner product proof
+        const offsetbytes = Math.ceil((nmbrRounds * 2) / 8);
+        const offsets = [];
+        let startIndex = 128 + 2 + 64*4 + 64 + 64*4;
+        for( let i = 0; i < offsetbytes * 2; i = i +2 ) {
+            const offsethex = str.substr(startIndex + i, 2);
+            const offsetbin = parseInt(offsethex, 16).toString(2);
+            offsets.push(offsetbin.padStart(8, '0'));
+        }
+        let oindex = 0;
+        let counter = 0;
+        const terms = [];
+        startIndex += offsetbytes * 2;
+        for( let j = 0; j < nmbrRounds; j++ ) {
+            if( counter >= 8 ) {
+                oindex++;
+                counter = 0;
+            }
+            const Lihex = str.substr(startIndex, 64);
+            const Liflag = offsets[oindex].charAt(7 - counter) === '1' ? '03' : '02';
+            const Licompr = Liflag + Lihex;
+            const Li = ec.keyFromPublic(Licompr, 'hex').pub;
+            counter++;
+            const Rihex = str.substr(startIndex + 64, 64);
+            const Riflag = offsets[oindex].charAt(7 - counter) === '1' ? '03' : '02';
+            const Ricompr = Riflag + Rihex;
+            const Ri = ec.keyFromPublic(Ricompr, 'hex').pub;
+            startIndex += 64 * 2;
+            counter++;
+            terms.push( {
+                L : Li,
+                R : Ri
+            })
+        }
+
+        return new CompressedBulletproof(A, S, T1, T2, tau, mu, dot, a0, b0, a1, b1, terms, ec.g, secp256k1.n);
     }
 
     /**

@@ -191,9 +191,26 @@ describe('Tests for the rangeproof', () => {
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
-        const compr = prf.compressProof(true);
+        const compr = prf.compressProof(false);
         const byteString = compr.toBytes();
         assert(byteString.length === 1350);
+    }).timeout(testTimeout);
+
+    it('Should serialize compr proof to bytes and deserialize correctly', () => {
+        const x = 1897278917812981289198n;
+        const val = 25n;
+        const low = 0n;
+        const upper = 64n;
+
+        const G = ec.g;
+        const H = constants.gens.H;
+        const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
+
+        const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
+        const compr = prf.compressProof(false);
+        const bytes = compr.toBytes();
+        const deser = CompressedBulletproof.fromByteString(bytes, 5);
+        assert(compr.equals(deser));
     }).timeout(testTimeout);
 
     it('Should test the basis of the inner product compression', () => {
