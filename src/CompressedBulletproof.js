@@ -47,7 +47,6 @@ class CompressedBulletproof extends RangeProof {
             BigInt(obj.a1),
             BigInt(obj.b1),
             intTerms,
-            ec.keyFromPublic(obj.G, 'hex').pub,
             BigInt(obj.order)
         );
     }
@@ -142,7 +141,7 @@ class CompressedBulletproof extends RangeProof {
             })
         }
 
-        return new CompressedBulletproof(A, S, T1, T2, tau, mu, dot, a0, b0, a1, b1, terms, ec.g, secp256k1.n);
+        return new CompressedBulletproof(A, S, T1, T2, tau, mu, dot, a0, b0, a1, b1, terms, secp256k1.n);
     }
 
     /**
@@ -159,10 +158,9 @@ class CompressedBulletproof extends RangeProof {
      * @param a1 {BigInt} The second element of the end vector a
      * @param b1 {BigInt} The second element of the end vector b
      * @param ind {{ L : Point, R : Point}[]} indeterminante variables
-     * @param G {Point} Generator
      * @param order {BigInt} curve order
      */
-    constructor(A, S, T1, T2, tx, txbf, e, a0, b0, a1, b1, ind,G, order) {
+    constructor(A, S, T1, T2, tx, txbf, e, a0, b0, a1, b1, ind, order) {
         super();
         this.A = A;
         this.S = S;
@@ -178,7 +176,6 @@ class CompressedBulletproof extends RangeProof {
         this.b.addElem(b0);
         this.b.addElem(b1);
         this.ind = ind;
-        this.G = G;
         this.order = order;
 
         this.T = new Transcript();
@@ -193,19 +190,17 @@ class CompressedBulletproof extends RangeProof {
         this.x = Utils.getFiatShamirChallengeTranscript(this.T, this.order);
     }
 
-    verify(V, low, up) {
+    verify(V, low, up, blindGen=constants.gens.H, valueGen=constants.gens.G) {
         if(low !== 0n ) {
             throw new Error("Currenlty only range proofs from 0 to n are allowed");
         }
-        // Generator H
-        const H = constants.gens.H;
 
         const T1 = this.T.clone();
 
         // Indeterminate variable w
         const w = Utils.getFiatShamirChallengeTranscript(T1, this.order);
         const wBN = Utils.toBN(w);
-        const Q = this.G.mul(wBN);
+        const Q = valueGen.mul(wBN);
 
         const y = this.y;
         const z = this.z;
@@ -216,8 +211,8 @@ class CompressedBulletproof extends RangeProof {
         const y_n = BigIntVector.getVectorToPowerN( y, up, this.order );
         const xsq = Maths.mod(x ** 2n, this.order);
 
-        const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, H);
-        const rightEq = V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
+        const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, blindGen, valueGen);
+        const rightEq = V.mul(Utils.toBN(zsq)).add(valueGen.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
         if( leftEq.eq(rightEq) === false ) { return false; }
 
         // Now prove validity of lx and rx
@@ -227,7 +222,7 @@ class CompressedBulletproof extends RangeProof {
         const vecH = PointVector.getVectorShallueVanDeWoestijne("H", up);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
-        const E = H.mul(Utils.toBN(this.e));
+        const E = blindGen.mul(Utils.toBN(this.e));
         const Einv = E.neg();
         const Bx = Utils.toBN(x);
         const vec_z = BigIntVector.getVectorWithOnlyScalar(z, up, this.order);
@@ -342,7 +337,6 @@ class CompressedBulletproof extends RangeProof {
             this.e === e.e &&
             this.a0 === e.a0 &&
             this.b0 === e.b0 &&
-            this.G.eq(e.G) &&
             this.order === e.order;
     }
 
@@ -368,7 +362,6 @@ class CompressedBulletproof extends RangeProof {
             a1 : '0x' + this.a.get(1).toString(16),
             b1 : '0x' + this.b.get(1).toString(16),
             ind : intTerms,
-            G : this.G.encode('hex'),
             order : '0x' + this.order.toString(16)
         };
 
@@ -388,7 +381,7 @@ class CompressedBulletproof extends RangeProof {
         byteString += Utils.encodeBigIntScalar(this.a.get(0));
         byteString += Utils.encodeBigIntScalar(this.b.get(0));
         byteString += Utils.encodeBigIntScalar(this.a.get(1));
-        byteString += Utils.encodeBigIntScalar(this.b.get(1))
+        byteString += Utils.encodeBigIntScalar(this.b.get(1));
         // Li, Ri
         const points = [];
         for( let elems of this.ind ) {

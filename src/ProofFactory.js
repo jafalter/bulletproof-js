@@ -19,9 +19,9 @@ class ProofFactory {
      * @param v {BigInt} the value of the commitment. Please use BigInt not number
      * @param bf {BigInt} blinding factor used in the commitment
      * @param V {Point} pedersen commitment for which we want to compute the rangeproof, which
-     *                  has to be a valid commitement to v with blinding factor B
-     * @param G {Point} generator G used in pedersen
-     * @param H {Point} generator H used in pedersen
+     *                  has to be a valid commitement to v with blinding factor bf using the valueGen and blindingGen generators
+     * @param valueGen {Point} generator used for the value in a pedersen commitment
+     * @param blindGen {Point} generator used for the blinding factor in a pedersen commitment
      * @param lower {BigInt} the lower bound of the rangeproof. (exponent of 2) Please use BigInt not number
      * @param upper {BigInt} the upper bound of the rangeproof. (exponent of 2) Please use BigInt not number
      * @param order {BigInt} Order of the group. All calculations will be mod order
@@ -29,34 +29,37 @@ class ProofFactory {
      * @param randomNum {boolean|function} optional random bigint generating function
      * @return {UncompressedBulletproof} Final rangeproof which can be verified
      */
-    static computeBulletproof(v, bf, V, G, H, lower, upper, order, doAssert=true, randomNum=false) {
+    static computeBulletproof(v, bf, V, valueGen, blindGen, lower, upper, order, doAssert=true, randomNum=false) {
 
         const T = new Transcript();
         const upBound = 2n ** upper;
         const lowBound = lower;
 
-        if( typeof v !== "bigint" || typeof  bf !== "bigint" || typeof lowBound !== "bigint" || typeof upBound !== "bigint" ) {
-            throw new Error("Parameters val, x, low and upper bound have to be bigints");
-        }
-        if( lowBound !== 0n ) {
-            throw new Error("Currently only range proofs with lower bound 0 are supported");
-        }
-        if( (upBound % 2n) !== 0n ) {
-            throw new Error("Upper bound has to be a power of 2");
-        }
-        if( v < lowBound || v > upBound ) {
-            throw new Error("val must be in the range [lowBound, upBound]");
+        // Some sanitizationchecks
+        if( doAssert ) {
+            if (typeof v !== "bigint" || typeof bf !== "bigint" || typeof lowBound !== "bigint" || typeof upBound !== "bigint") {
+                throw new Error("Parameters val, x, low and upper bound have to be bigints");
+            }
+            if (lowBound !== 0n) {
+                throw new Error("Currently only range proofs with lower bound 0 are supported");
+            }
+            if ((upBound % 2n) !== 0n) {
+                throw new Error("Upper bound has to be a power of 2");
+            }
+            if (v < lowBound || v > upBound) {
+                throw new Error("val must be in the range [lowBound, upBound]");
+            }
         }
         if( !randomNum ) {
             const Rand = require('./Rand');
             randomNum = Rand.secureRandomBigInt;
         }
-        const binary = v.toString(2);
+        const valInBinary = v.toString(2);
 
         // Vector 1 contains the value in binary
         const vec1 = new BigIntVector(order);
-        for( let i = binary.length -1; i >= 0; i-- ) {
-            const v = binary[i];
+        for( let i = valInBinary.length -1; i >= 0; i-- ) {
+            const v = valInBinary[i];
             vec1.addElem(BigInt(v))
         }
 
@@ -80,11 +83,12 @@ class ProofFactory {
         // To match notation with reference
         const a_L = vec1;
         const a_R = vec1.subScalar(1n);
+        // Point vectors used in the inner product proof
         const vecG = PointVector.getVectorShallueVanDeWoestijne('G', upper);
         const vecH = PointVector.getVectorShallueVanDeWoestijne('H', upper);
         // Commit to those values in a pedersen commitment (is needed later)
         const a_bf = randomNum(order);
-        const A = Utils.getVectorPedersenCommitment(a_L, a_R, vecG, vecH, a_bf, order, H);
+        const A = Utils.getVectorPedersenCommitment(a_L, a_R, vecG, vecH, a_bf, order, blindGen);
         T.addPoint(A);
         if( doAssert ) assert(a_L.multVectorToScalar(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
 
@@ -117,7 +121,7 @@ class ProofFactory {
         }
         // We need to commit to s_L and s_R
         const s_bf = randomNum(order);
-        const S = Utils.getVectorPedersenCommitment(s_L, s_R, vecG, vecH, s_bf, order, H);
+        const S = Utils.getVectorPedersenCommitment(s_L, s_R, vecG, vecH, s_bf, order, blindGen);
         T.addPoint(S);
 
         const y = Utils.getFiatShamirChallengeTranscript(T, order);
@@ -192,11 +196,11 @@ class ProofFactory {
         const t1 = Maths.mod(l0.addVector(l1).multVectorToScalar(r0.addVector(r1)) - t0 - t2, order);
 
         const t1_bf = randomNum(order);
-        const T1 = Utils.getPedersenCommitment(t1, t1_bf, order, H);
+        const T1 = Utils.getPedersenCommitment(t1, t1_bf, order, blindGen, valueGen);
         T.addPoint(T1);
 
         const t2_bf = randomNum(order);
-        const T2 = Utils.getPedersenCommitment(t2, t2_bf, order, H);
+        const T2 = Utils.getPedersenCommitment(t2, t2_bf, order, blindGen, valueGen);
         T.addPoint(T2);
 
         // Now we get the challenge point x
@@ -218,14 +222,14 @@ class ProofFactory {
             assert(Maths.mod(tx, order) === Maths.mod(t(x), order));
 
             // Check the sub equalities of the terms
-            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, order, H).eq(V.mul(Bzsq)), "partial equality 1 of the term");
-            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, order, H).add(G.mul(Bdelta)).eq(V.mul(Bzsq).add(G.mul(Bdelta))), "partial equality 2 of the term");
-            assert(Utils.getPedersenCommitment(x * t1, x * t1_bf, order, H).eq(T1.mul(Bx), "partial equality 3 of the term"));
-            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf, order, H).eq(T2.mul(Bxsq), "partial equality 4 of the term"));
+            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, order, blindGen, valueGen).eq(V.mul(Bzsq)), "partial equality 1 of the term");
+            assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, order, blindGen, valueGen).add(valueGen.mul(Bdelta)).eq(V.mul(Bzsq).add(valueGen.mul(Bdelta))), "partial equality 2 of the term");
+            assert(Utils.getPedersenCommitment(x * t1, x * t1_bf, order, blindGen, valueGen).eq(T1.mul(Bx), "partial equality 3 of the term"));
+            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf, order, blindGen, valueGen).eq(T2.mul(Bxsq), "partial equality 4 of the term"));
 
             // The complete equality
-            const leftEq = Utils.getPedersenCommitment(tx, tx_bf, order, H);
-            const rightEq = V.mul(Utils.toBN(zsq)).add(G.mul(Utils.toBN(Maths.mod(ProofUtils.delta(y_n, z), order)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
+            const leftEq = Utils.getPedersenCommitment(tx, tx_bf, order, blindGen, valueGen);
+            const rightEq = V.mul(Utils.toBN(zsq)).add(valueGen.mul(Utils.toBN(Maths.mod(ProofUtils.delta(y_n, z), order)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
 
             assert(leftEq.eq(rightEq), "Final equality the verifier checks to verify t(x) is correct polynomial");
         }
@@ -254,14 +258,10 @@ class ProofFactory {
 
         if( doAssert ) {
             // transmutating the generator H such that we can verify r(x)
-            const vecG = PointVector.getVectorShallueVanDeWoestijne('G', y_n.length());
-            const vecH = PointVector.getVectorShallueVanDeWoestijne('H', y_n.length());
-            /*const vecG = PointVector.getVectorOfPoint(G, y_n.length());
-            const vecH = PointVector.getVectorOfPoint(H, y_n.length());*/
             const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
             // Final verification
-            const E = H.mul(Utils.toBN(e));
+            const E = blindGen.mul(Utils.toBN(e));
             const Einv = E.neg();
             const Bx = Utils.toBN(x);
             const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_n.length(), order);
@@ -276,7 +276,7 @@ class ProofFactory {
             assert(P1.eq(P2), 'What the verifier checks to verify that l(x) and r(x) are correct');
             assert(P.eq(P1));
         }
-        return new UncompressedBulletproof(A, S, T1, T2, tx, tx_bf, e, l(x), r(x), G, order);
+        return new UncompressedBulletproof(A, S, T1, T2, tx, tx_bf, e, l(x), r(x), order);
     }
 }
 

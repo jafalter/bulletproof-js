@@ -43,7 +43,6 @@ class UncompressedBulletproof extends RangeProof {
             BigInt(obj.e),
             BigIntVector.getFromObject(obj.lx),
             BigIntVector.getFromObject(obj.rx),
-            ec.keyFromPublic(obj.G, 'hex').pub,
             BigInt(obj.order),
         )
     }
@@ -59,10 +58,9 @@ class UncompressedBulletproof extends RangeProof {
      * @param e {BigInt} Opening e of the combined blinding factors using in A and S to verify correctness of l(x) and r(x)
      * @param lx {BigIntVector} left side of the blinded vector product
      * @param rx {BigIntVector} right side of the blinded vector prduct
-     * @param G {Point} Base generator
      * @param order {BigInt} curve order
      */
-    constructor(A, S, T1, T2, tx, txbf, e, lx, rx, G, order) {
+    constructor(A, S, T1, T2, tx, txbf, e, lx, rx, order) {
         super();
         this.A = A;
         this.S = S;
@@ -73,7 +71,6 @@ class UncompressedBulletproof extends RangeProof {
         this.e = e;
         this.lx = lx;
         this.rx = rx;
-        this.G = G;
         this.order = order;
         this.T = new Transcript();
         this.T.addPoint(this.A);
@@ -105,7 +102,6 @@ class UncompressedBulletproof extends RangeProof {
             this.e === e.e &&
             this.lx.equals(e.lx) &&
             this.rx.equals(e.rx) &&
-            this.G.eq(e.G) &&
             this.order === e.order;
     }
 
@@ -125,19 +121,15 @@ class UncompressedBulletproof extends RangeProof {
             e: '0x' + this.e.toString(16),
             lx: this.lx.toObject(),
             rx: this.rx.toObject(),
-            G: this.G.encode('hex'),
             order: '0x' + this.order.toString(16)
         };
         return pp ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
     }
 
-    verify(V, low, up) {
+    verify(V, low, up, blinGen=constants.gens.H, valueGen=constants.gens.G) {
         if (low !== 0n) {
             throw new Error("Currently only range proofs from 0 to n are allowed");
         }
-        // Generator H
-        const G = this.G;
-        const H = constants.gens.H;
 
         // First we calculate the challenges y, z, x by using Fiat Shamir
         const y = this.y;
@@ -155,8 +147,8 @@ class UncompressedBulletproof extends RangeProof {
         const y_n = BigIntVector.getVectorToPowerN(y, up, this.order);
         const xsq = Maths.mod(x ** 2n, this.order);
 
-        const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, H);
-        const rightEq = V.mul(Utils.toBN(zsq)).add(this.G.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
+        const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, blinGen, valueGen);
+        const rightEq = V.mul(Utils.toBN(zsq)).add(valueGen.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
         if (leftEq.eq(rightEq) === false) {
             return false;
         }
@@ -167,7 +159,7 @@ class UncompressedBulletproof extends RangeProof {
         const vecG = PointVector.getVectorShallueVanDeWoestijne('G', up);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
-        const E = H.mul(Utils.toBN(this.e));
+        const E = blinGen.mul(Utils.toBN(this.e));
         const Einv = E.neg();
         const Bx = Utils.toBN(x);
         const vec_z = BigIntVector.getVectorWithOnlyScalar(z, up, this.order);
@@ -189,13 +181,13 @@ class UncompressedBulletproof extends RangeProof {
      * Use the inner product compression to
      * compress size of the vectors to log order
      *
+     * @param blindGen {Point} blinding factor generator (default is H)
+     * @param valueGen {Point} value generator (default is G)
      * @param doAssert {boolean} if we should do assertions which will hurt performance
      * @return {CompressedBulletproof}
      */
-    compressProof(doAssert = false) {
-        const G = this.G;
+    compressProof(blindGen=constants.gens.H, valueGen=constants.gens.G, doAssert = false) {
         const n = this.order;
-        const H = constants.gens.H;
 
         const a = this.lx.clone();
         const b = this.rx.clone();
@@ -213,7 +205,7 @@ class UncompressedBulletproof extends RangeProof {
         const P = vecG.multWithBigIntVector(a).toSinglePoint().add(vecH2.multWithBigIntVector(b).toSinglePoint());
         const c = a.multVectorToScalar(b);
         const cBN = Utils.toBN(c);
-        const Q = G.mul(wBN);
+        const Q = valueGen.mul(wBN);
 
         /* Now we need k iterations to half the vectors
            until we arrive at single element vectors
@@ -273,7 +265,7 @@ class UncompressedBulletproof extends RangeProof {
 
             if (doAssert) {
                 assert(Maths.mod(uk * ukinv, n) === 1n);
-                assert(G.mul(Utils.toBN(uk * ukinv)).eq(G));
+                assert(valueGen.mul(Utils.toBN(uk * ukinv)).eq(valueGen));
             }
 
             intermediateTerms.push({
@@ -308,7 +300,7 @@ class UncompressedBulletproof extends RangeProof {
                 const uj2invBN = Utils.toBN(uj2inv);
 
                 assert(Maths.mod(uj2 * uj2inv, n) === 1n);
-                assert(G.mul(Utils.toBN(uj2 * uj2inv)).eq(G));
+                assert(valueGen.mul(Utils.toBN(uj2 * uj2inv)).eq(valueGen));
 
                 const Lkuj2 = Lj.mul(uj2_BN);
                 const Rkuj2inv = Rj.mul(uj2invBN);
@@ -364,7 +356,6 @@ class UncompressedBulletproof extends RangeProof {
             a_sum.get(1),
             b_sum.get(1),
             intermediateTerms,
-            G,
             n
         );
     }

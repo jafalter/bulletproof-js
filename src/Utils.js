@@ -115,16 +115,13 @@ class Utils {
      * @param v {BigInt} The value we want to commit to
      * @param x {BigInt} The blinding factor
      * @param n {BigInt} Optional group order
-     * @param H {Point} Second generator point used in the commitment
+     * @param blindingGen {Point} Blinding generator point (default is H)
+     * @param valueGen {Point} Optional value generator (default is G)
      */
-    static getPedersenCommitment(v, x, n=false, H=false) {
-        const G = ec.g;
-        if( !H ) {
-            H = constants.gens.H;
-        }
+    static getPedersenCommitment(v, x, n=false, blindingGen=constants.gens.H, valueGen=constants.gens.G) {
         const x_BN = Utils.toBN(n ? Maths.mod(x, n) : x);
         const v_BN = Utils.toBN(n ? Maths.mod(v, n) : x);
-        return G.mul(v_BN).add(H.mul(x_BN))
+        return valueGen.mul(v_BN).add(blindingGen.mul(x_BN))
     }
 
     /**
@@ -187,17 +184,13 @@ class Utils {
      * @param vecH {PointVector} H vector
      * @param x {BigInt} blinding factor
      * @param n {BigInt} optional group order
-     * @param H {Point} second Generator (If non provided we sha256 hash G)
+     * @param blindGen {Point} second Generator (If non provided we sha256 hash G)
      * @return {Point}
      */
-    static getVectorPedersenCommitment(l, r, vecG, vecH, x, n=false, H=false) {
-        const G = ec.g;
-        if( !H ) {
-            H = constants.gens.H;
-        }
+    static getVectorPedersenCommitment(l, r, vecG, vecH, x, n=false, blindGen=constants.gens.H) {
         const P1 = vecG.multWithBigIntVector(l).toSinglePoint();
         const P2 = vecH.multWithBigIntVector(r).toSinglePoint();
-        const B = H.mul(Utils.toBN(x));
+        const B = blindGen.mul(Utils.toBN(x));
         return P1.add(P2).add(B);
     }
 }

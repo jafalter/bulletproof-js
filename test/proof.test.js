@@ -110,8 +110,23 @@ describe('Tests for the rangeproof', () => {
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
-        const compr = prf.compressProof(true);
+        const compr = prf.compressProof();
         assert(compr.verify(V, 0n, 64n));
+    }).timeout(testTimeout);
+
+    it('Should create a Proof with H as valueGen and G as blindingG (as it is done in Grin)', () => {
+        const x = 1897278917812981289198n;
+        const val = 25n;
+        const low = 0n;
+        const upper = 64n;
+
+        const G = ec.g;
+        const H = constants.gens.H;
+        const V = Utils.getPedersenCommitment(val, x, secp256k1.n, G, H);
+
+        const prf = Factory.computeBulletproof(val, x, V, H, G, low, upper, secp256k1.n);
+        const compr = prf.compressProof(G, H, true);
+        assert(compr.verify(V, 0n, 64n, G, H));
     }).timeout(testTimeout);
 
     it('Should fail when verifing a uncompressed proof with invalid ranges', () => {
@@ -144,7 +159,7 @@ describe('Tests for the rangeproof', () => {
 
     it('Should serialize and deserialize a compressed proof correctly', () => {
         const prf = UncompressedBulletproof.fromJsonString(serUncProof);
-        const compr = prf.compressProof(true);
+        const compr = prf.compressProof();
         const ser = compr.toJson();
         const des = CompressedBulletproof.fromJsonString(ser);
         compr.equals(des);
@@ -191,7 +206,7 @@ describe('Tests for the rangeproof', () => {
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
-        const compr = prf.compressProof(false);
+        const compr = prf.compressProof();
         const byteString = compr.toBytes();
         assert(byteString.length === 1350);
     }).timeout(testTimeout);
@@ -207,7 +222,7 @@ describe('Tests for the rangeproof', () => {
         const V = Utils.getPedersenCommitment(val, x, secp256k1.n, H);
 
         const prf = Factory.computeBulletproof(val, x, V, G, H, low, upper, secp256k1.n);
-        const compr = prf.compressProof(false);
+        const compr = prf.compressProof();
         const bytes = compr.toBytes();
         const deser = CompressedBulletproof.fromByteString(bytes, 5);
         assert(compr.equals(deser));
