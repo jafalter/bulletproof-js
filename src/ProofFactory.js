@@ -87,8 +87,8 @@ class ProofFactory {
         const vecG = PointVector.getVectorShallueVanDeWoestijne('G', upper);
         const vecH = PointVector.getVectorShallueVanDeWoestijne('H', upper);
         // Commit to those values in a pedersen commitment (is needed later)
-        const a_bf = randomNum(order);
-        const A = Utils.getVectorPedersenCommitment(a_L, a_R, vecG, vecH, a_bf, order, blindGen);
+        const alpha = randomNum(order);
+        const A = Utils.getVectorPedersenCommitment(a_L, a_R, vecG, vecH, alpha, order, blindGen);
         T.addPoint(A);
         if( doAssert ) assert(a_L.multVectorToScalar(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
 
@@ -120,8 +120,8 @@ class ProofFactory {
             s_R.addElem(r2);
         }
         // We need to commit to s_L and s_R
-        const s_bf = randomNum(order);
-        const S = Utils.getVectorPedersenCommitment(s_L, s_R, vecG, vecH, s_bf, order, blindGen);
+        const rho = randomNum(order);
+        const S = Utils.getVectorPedersenCommitment(s_L, s_R, vecG, vecH, rho, order, blindGen);
         T.addPoint(S);
 
         const y = Utils.getFiatShamirChallengeTranscript(T, order);
@@ -195,21 +195,21 @@ class ProofFactory {
         const t2 = Maths.mod(l1.multVectorToScalar(r1), order);
         const t1 = Maths.mod(l0.addVector(l1).multVectorToScalar(r0.addVector(r1)) - t0 - t2, order);
 
-        const t1_bf = randomNum(order);
-        const T1 = Utils.getPedersenCommitment(t1, t1_bf, order, blindGen, valueGen);
+        const tau1 = randomNum(order);
+        const T1 = Utils.getPedersenCommitment(t1, tau1, order, blindGen, valueGen);
         T.addPoint(T1);
 
-        const t2_bf = randomNum(order);
-        const T2 = Utils.getPedersenCommitment(t2, t2_bf, order, blindGen, valueGen);
+        const tau2 = randomNum(order);
+        const T2 = Utils.getPedersenCommitment(t2, tau2, order, blindGen, valueGen);
         T.addPoint(T2);
 
         // Now we get the challenge point x
         const x = Utils.getFiatShamirChallengeTranscript(T, order, false);
 
         const xsq = Maths.mod(x ** 2n, order);
-        const tx = Maths.mod(t0 + t1 * x + t2 * xsq, order);
-        const tx_bf = Maths.mod(zsq * bf + x * t1_bf + t2_bf * xsq, order);
-        // Send openings tx and tx_bf back to the verifier
+        const dot = Maths.mod(t0 + t1 * x + t2 * xsq, order);
+        const taux = Maths.mod(zsq * bf + x * tau1 + tau2 * xsq, order);
+        // Send openings dot and tx_bf back to the verifier
 
         if( doAssert ) {
             const d = ProofUtils.delta(y_n, z, order);
@@ -219,25 +219,25 @@ class ProofFactory {
             const Bxsq = Utils.toBN(xsq);
 
             // Check t(x) was calculated correctly
-            assert(Maths.mod(tx, order) === Maths.mod(t(x), order));
+            assert(Maths.mod(dot, order) === Maths.mod(t(x), order));
 
             // Check the sub equalities of the terms
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, order, blindGen, valueGen).eq(V.mul(Bzsq)), "partial equality 1 of the term");
             assert(Utils.getPedersenCommitment(zsq * v, zsq * bf, order, blindGen, valueGen).add(valueGen.mul(Bdelta)).eq(V.mul(Bzsq).add(valueGen.mul(Bdelta))), "partial equality 2 of the term");
-            assert(Utils.getPedersenCommitment(x * t1, x * t1_bf, order, blindGen, valueGen).eq(T1.mul(Bx), "partial equality 3 of the term"));
-            assert(Utils.getPedersenCommitment(xsq * t2, xsq * t2_bf, order, blindGen, valueGen).eq(T2.mul(Bxsq), "partial equality 4 of the term"));
+            assert(Utils.getPedersenCommitment(x * t1, x * tau1, order, blindGen, valueGen).eq(T1.mul(Bx), "partial equality 3 of the term"));
+            assert(Utils.getPedersenCommitment(xsq * t2, xsq * tau2, order, blindGen, valueGen).eq(T2.mul(Bxsq), "partial equality 4 of the term"));
 
             // The complete equality
-            const leftEq = Utils.getPedersenCommitment(tx, tx_bf, order, blindGen, valueGen);
+            const leftEq = Utils.getPedersenCommitment(dot, taux, order, blindGen, valueGen);
             const rightEq = V.mul(Utils.toBN(zsq)).add(valueGen.mul(Utils.toBN(Maths.mod(ProofUtils.delta(y_n, z), order)))).add(T1.mul(Utils.toBN(x))).add(T2.mul(Utils.toBN(xsq)));
 
             assert(leftEq.eq(rightEq), "Final equality the verifier checks to verify t(x) is correct polynomial");
         }
 
         // Now we need to prove to the verifier that l(x) and r(x) are correct
-        // For that we need to give the opening e of the combined blinding factors used
+        // For that we need to give the opening mu of the combined blinding factors used
         // for the commitments A and S
-        const e = Maths.mod(a_bf + ( x * s_bf ), order);
+        const mu = Maths.mod(alpha + ( x * rho ), order);
 
         /* At this point we calculated everything for the verifier to
         verify the proof, the final values sen't to the verifier are
@@ -247,7 +247,7 @@ class ProofFactory {
         S       ... Vector pedersen commitment committing to s_L and s_R the blinding vectors
         t(x)    ... Polynomial t() evaluated with challenge x
         t(x_bf) ... Opening blinding factor for t() to verify the correctness of t(x)
-        e       ... Opening e of the combined blinding factors using in A and S to verify correctness of l(x) and r(x)
+        mu       ... Opening mu of the combined blinding factors using in A and S to verify correctness of l(x) and r(x)
         l(x)    ... left side of the vector
         r(x)    ... right side of the vector
 
@@ -261,7 +261,7 @@ class ProofFactory {
             const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
             // Final verification
-            const E = blindGen.mul(Utils.toBN(e));
+            const E = blindGen.mul(Utils.toBN(mu));
             const Einv = E.neg();
             const Bx = Utils.toBN(x);
             const vec_z = BigIntVector.getVectorWithOnlyScalar(z, y_n.length(), order);
@@ -276,7 +276,7 @@ class ProofFactory {
             assert(P1.eq(P2), 'What the verifier checks to verify that l(x) and r(x) are correct');
             assert(P.eq(P1));
         }
-        return new UncompressedBulletproof(A, S, T1, T2, tx, tx_bf, e, l(x), r(x), order);
+        return new UncompressedBulletproof(A, S, T1, T2, dot, taux, mu, l(x), r(x), order);
     }
 }
 

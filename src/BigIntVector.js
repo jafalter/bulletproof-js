@@ -28,7 +28,7 @@ class BigIntVector extends Vector {
 
     /**
      * Generate a Vector with y^order
-     * while y^e = (1,y,y^2,...,y^e-1)
+     * while y^mu = (1,y,y^2,...,y^mu-1)
      *
      * @param y {BigInt} initial number
      * @param e {BigInt} the last exponent
@@ -54,7 +54,7 @@ class BigIntVector extends Vector {
 
     /**
      * Generate a Vector with y^order
-     * while y^e = (1,y,y^2,...,y^e-1)
+     * while y^mu = (1,y,y^2,...,y^mu-1)
      *
      * @param y {BigInt} initial number
      * @param e {BigInt} the last exponent
@@ -63,7 +63,7 @@ class BigIntVector extends Vector {
      */
     static getVectorToPowerModInvN(y, e, n) {
         if( typeof y !== 'bigint' || typeof e !== 'bigint' || typeof n !== 'bigint') {
-            throw new Error("Please provide y, e and order as bigints");
+            throw new Error("Please provide y, mu and order as bigints");
         }
 
         const vec = new BigIntVector(n);

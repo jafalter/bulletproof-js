@@ -39,9 +39,9 @@ class CompressedBulletproof extends RangeProof {
             ec.keyFromPublic(obj.S, 'hex').pub,
             ec.keyFromPublic(obj.T1, 'hex').pub,
             ec.keyFromPublic(obj.T2, 'hex').pub,
-            BigInt(obj.tx),
-            BigInt(obj.txbf),
-            BigInt(obj.e),
+            BigInt(obj.dot),
+            BigInt(obj.taux),
+            BigInt(obj.mu),
             BigInt(obj.a0),
             BigInt(obj.b0),
             BigInt(obj.a1),
@@ -57,15 +57,17 @@ class CompressedBulletproof extends RangeProof {
      *
      * @param str {string}
      * @param nmbrRounds {int} the number of inner product rounds
-     *
+     * @param order {BigInt}
      * @return {CompressedBulletproof}
      */
-    static fromByteString(str, nmbrRounds) {
+    static fromByteString(str, nmbrRounds, order=secp256k1.n) {
         // First we parse two 32 byte scalars
         const tauhex = str.substr(0,64);
-        const tau = BigInt('0x' + tauhex);
+        const tauneg = BigInt('0x' + tauhex);
+        const tau = cryptoutils.modInv(tauneg, order);
         const muhex = str.substr(64, 64);
-        const mu = BigInt('0x' + muhex);
+        const muneg = BigInt('0x' + muhex);
+        const mu = cryptoutils.modInv(muneg, order);
 
         // Now we parse the points A, S, T1 and T2 with one byte offset
         const offset = str.substr(128, 2);
@@ -141,18 +143,18 @@ class CompressedBulletproof extends RangeProof {
             })
         }
 
-        return new CompressedBulletproof(A, S, T1, T2, tau, mu, dot, a0, b0, a1, b1, terms, secp256k1.n);
+        return new CompressedBulletproof(A, S, T1, T2, dot, tau, mu, a0, b0, a1, b1, terms, secp256k1.n);
     }
 
     /**
      *
      * @param A {Point} Vector pedersen commitment committing to a_L and a_R the amount split into a vector which is the amount in binary and a vector containing exponents of 2
      * @param S {Point} Vector pedersen commitment committing to s_L and s_R the blinding vectors
-     * @param T1 {Point} Pedersen commitment to tx
-     * @param T2 {Point} Pedersen commitment to tx²
-     * @param tx {BigInt} Polynomial t() evaluated with challenge x
-     * @param txbf {BigInt} Opening blinding factor for t() to verify the correctness of t(x)
-     * @param e {BigInt} Opening e of the combined blinding factors using in A and S to verify correctness of l(x) and r(x)
+     * @param T1 {Point} Pedersen commitment to dot
+     * @param T2 {Point} Pedersen commitment to dot²
+     * @param dot {BigInt} Polynomial t() evaluated with challenge x
+     * @param taux {BigInt} Opening blinding factor for t() to verify the correctness of t(x)
+     * @param mu {BigInt} Opening mu of the combined blinding factors using in A and S to verify correctness of l(x) and r(x)
      * @param a0 {BigInt} The first element of the end vector a
      * @param b0 {BigInt} The first element of the end vector b
      * @param a1 {BigInt} The second element of the end vector a
@@ -160,15 +162,15 @@ class CompressedBulletproof extends RangeProof {
      * @param ind {{ L : Point, R : Point}[]} indeterminante variables
      * @param order {BigInt} curve order
      */
-    constructor(A, S, T1, T2, tx, txbf, e, a0, b0, a1, b1, ind, order) {
+    constructor(A, S, T1, T2, dot, taux, mu, a0, b0, a1, b1, ind, order) {
         super();
         this.A = A;
         this.S = S;
         this.T1 = T1;
         this.T2 = T2;
-        this.tx = tx;
-        this.txbf = txbf;
-        this.e = e;
+        this.dot = dot;
+        this.taux = taux;
+        this.mu = mu;
         this.a = new BigIntVector(order);
         this.b = new BigIntVector(order);
         this.a.addElem(a0);
@@ -211,7 +213,7 @@ class CompressedBulletproof extends RangeProof {
         const y_n = BigIntVector.getVectorToPowerN( y, up, this.order );
         const xsq = Maths.mod(x ** 2n, this.order);
 
-        const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, blindGen, valueGen);
+        const leftEq = Utils.getPedersenCommitment(this.dot, this.taux, this.order, blindGen, valueGen);
         const rightEq = V.mul(Utils.toBN(zsq)).add(valueGen.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
         if( leftEq.eq(rightEq) === false ) { return false; }
 
@@ -222,7 +224,7 @@ class CompressedBulletproof extends RangeProof {
         const vecH = PointVector.getVectorShallueVanDeWoestijne("H", up);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
-        const E = blindGen.mul(Utils.toBN(this.e));
+        const E = blindGen.mul(Utils.toBN(this.mu));
         const Einv = E.neg();
         const Bx = Utils.toBN(x);
         const vec_z = BigIntVector.getVectorWithOnlyScalar(z, up, this.order);
@@ -238,9 +240,9 @@ class CompressedBulletproof extends RangeProof {
 
         if( P1.eq(P2) === false ) { return false; }
 
-        // Now we prove the < lx, rx > = tx relation using the output of inner product proof
+        // Now we prove the < lx, rx > = dot relation using the output of inner product proof
         const P = P1;
-        const c = this.tx;
+        const c = this.dot;
         const cBN = Utils.toBN(c);
 
         // Get challenges u_k via Fiat Shamir
@@ -332,9 +334,9 @@ class CompressedBulletproof extends RangeProof {
             this.S.eq(e.S) &&
             this.T1.eq(e.T1) &&
             this.T2.eq(e.T2) &&
-            this.tx === e.tx &&
-            this.txbf === e.txbf &&
-            this.e === e.e &&
+            this.dot === e.dot &&
+            this.taux === e.taux &&
+            this.mu === e.mu &&
             this.a0 === e.a0 &&
             this.b0 === e.b0 &&
             this.order === e.order;
@@ -354,9 +356,9 @@ class CompressedBulletproof extends RangeProof {
             S : this.S.encode('hex'),
             T1 : this.T1.encode('hex'),
             T2 : this.T2.encode('hex'),
-            tx : '0x' + this.tx.toString(16),
-            txbf : '0x' + this.txbf.toString(16),
-            e : '0x' + this.e.toString(16),
+            dot : '0x' + this.dot.toString(16),
+            taux : '0x' + this.taux.toString(16),
+            mu : '0x' + this.mu.toString(16),
             a0 : '0x' + this.a.get(0).toString(16),
             b0 : '0x' + this.b.get(0).toString(16),
             a1 : '0x' + this.a.get(1).toString(16),
@@ -369,14 +371,17 @@ class CompressedBulletproof extends RangeProof {
     }
 
     toBytes() {
-        // First we have tx and tx_bf (negate?)
+        // First we have dot and tx_bf (negate?)
         let byteString = "";
-        byteString += Utils.encodeBigIntScalar(this.tx);
-        byteString += Utils.encodeBigIntScalar(this.txbf);
+        const tauxneg = cryptoutils.modInv(this.taux, this.order);
+        byteString += Utils.encodeBigIntScalar(tauxneg);
+        // mu scalar
+        const muneg = cryptoutils.modInv(this.mu, this.order);
+        byteString += Utils.encodeBigIntScalar(muneg);
         // Now we encode commitments A,S,T1,T2
         byteString += Utils.encodePoints([this.A, this.S, this.T1, this.T2]);
-        // e scalar
-        byteString += Utils.encodeBigIntScalar(this.e);
+        // dot
+        byteString += Utils.encodeBigIntScalar(this.dot);
         // End vector elements
         byteString += Utils.encodeBigIntScalar(this.a.get(0));
         byteString += Utils.encodeBigIntScalar(this.b.get(0));

@@ -66,12 +66,38 @@ class Utils {
         if( typeof n !== 'bigint' ) {
             throw new Error("Please provide n as a BigInt value");
         }
+
+        const fake = this.debugFakeChallenges();
+        const hex = fake ? fake : Utils.sha256strtohex(ts.toString());
+        const num = Maths.mod(BigInt('0x' + hex), n);
+        const p = ec.g.mul(num);
+        ts.addPoint(p);
+        return retPoint ? p : num;
+    }
+
+    /**
+     * A way to fake the challenges calculated during the proof
+     * Only use this for debugging purposes
+     *
+     * To active set
+     * DEBUG_CHALLENGES = "true"
+     * FAKE_CHALLENGES = json array
+     *
+     * @return {boolean|array}
+     */
+    static debugFakeChallenges() {
+        if( !process.env.DEBUG_CHALLENGES ) {
+            return false;
+        }
         else {
-            const hex = Utils.sha256strtohex(ts.toString());
-            const num = Maths.mod(BigInt('0x' + hex), n);
-            const p = ec.g.mul(num);
-            ts.addPoint(p);
-            return retPoint ? p : num;
+            if( !this.fakechallenges ) {
+                this.fakechallenges = JSON.parse(process.env.FAKE_CHALLENGES);
+                this.challenge_index = 0;
+            }
+            const x = this.fakechallenges[this.challenge_index];
+            this.challenge_index++;
+            console.log("Read fake challenge " + x);
+            return x;
         }
     }
 

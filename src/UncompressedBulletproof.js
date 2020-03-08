@@ -14,10 +14,6 @@ const ProofUtils = require('./ProofUtils');
 
 const ec = new EC('secp256k1');
 
-// We stop the inner product proof one round early
-// This way we spare 2 commitments
-const END_VECTOR_LENGTH = 2;
-
 /**
  * A bulletproof which can be verified or transformed into
  * a more compact InnerProductBulletproof
@@ -38,9 +34,9 @@ class UncompressedBulletproof extends RangeProof {
             ec.keyFromPublic(obj.S, 'hex').pub,
             ec.keyFromPublic(obj.T1, 'hex').pub,
             ec.keyFromPublic(obj.T2, 'hex').pub,
-            BigInt(obj.tx),
-            BigInt(obj.txbf),
-            BigInt(obj.e),
+            BigInt(obj.dot),
+            BigInt(obj.taux),
+            BigInt(obj.mu),
             BigIntVector.getFromObject(obj.lx),
             BigIntVector.getFromObject(obj.rx),
             BigInt(obj.order),
@@ -51,24 +47,24 @@ class UncompressedBulletproof extends RangeProof {
      *
      * @param A {Point} Vector pedersen commitment committing to a_L and a_R the amount split into a vector which is the amount in binary and a vector containing exponents of 2
      * @param S {Point} Vector pedersen commitment committing to s_L and s_R the blinding vectors
-     * @param T1 {Point} Pedersen commitment to tx
-     * @param T2 {Point} Pedersen commitment to tx²
-     * @param tx {BigInt} Polynomial t() evaluated with challenge x
-     * @param txbf {BigInt} Opening blinding factor for t() to verify the correctness of t(x)
-     * @param e {BigInt} Opening e of the combined blinding factors using in A and S to verify correctness of l(x) and r(x)
+     * @param T1 {Point} Pedersen commitment to dot
+     * @param T2 {Point} Pedersen commitment to dot²
+     * @param dot {BigInt} Polynomial t() evaluated with challenge x
+     * @param taux {BigInt} Opening blinding factor for t() to verify the correctness of t(x)
+     * @param mu {BigInt} Opening mu of the combined blinding factors using in A and S to verify correctness of l(x) and r(x)
      * @param lx {BigIntVector} left side of the blinded vector product
      * @param rx {BigIntVector} right side of the blinded vector prduct
      * @param order {BigInt} curve order
      */
-    constructor(A, S, T1, T2, tx, txbf, e, lx, rx, order) {
+    constructor(A, S, T1, T2, dot, taux, mu, lx, rx, order) {
         super();
         this.A = A;
         this.S = S;
         this.T1 = T1;
         this.T2 = T2;
-        this.tx = tx;
-        this.txbf = txbf;
-        this.e = e;
+        this.dot = dot;
+        this.taux = taux;
+        this.mu = mu;
         this.lx = lx;
         this.rx = rx;
         this.order = order;
@@ -97,9 +93,9 @@ class UncompressedBulletproof extends RangeProof {
             this.S.eq(e.S) &&
             this.T1.eq(e.T1) &&
             this.T2.eq(e.T2) &&
-            this.tx === e.tx &&
-            this.txbf === e.txbf &&
-            this.e === e.e &&
+            this.dot === e.dot &&
+            this.taux === e.taux &&
+            this.mu === e.mu &&
             this.lx.equals(e.lx) &&
             this.rx.equals(e.rx) &&
             this.order === e.order;
@@ -116,9 +112,9 @@ class UncompressedBulletproof extends RangeProof {
             S: this.S.encode('hex'),
             T1: this.T1.encode('hex'),
             T2: this.T2.encode('hex'),
-            tx: '0x' + this.tx.toString(16),
-            txbf: '0x' + this.txbf.toString(16),
-            e: '0x' + this.e.toString(16),
+            dot: '0x' + this.dot.toString(16),
+            taux: '0x' + this.taux.toString(16),
+            mu: '0x' + this.mu.toString(16),
             lx: this.lx.toObject(),
             rx: this.rx.toObject(),
             order: '0x' + this.order.toString(16)
@@ -136,9 +132,9 @@ class UncompressedBulletproof extends RangeProof {
         const z = this.z;
         const x = this.x;
 
-        // Verify that <lx, rx> = tx
+        // Verify that <lx, rx> = dot
         const vTx = Maths.mod(this.lx.multVectorToScalar(this.rx, this.order), this.order);
-        if (vTx !== this.tx) {
+        if (vTx !== this.dot) {
             return false;
         }
 
@@ -147,7 +143,7 @@ class UncompressedBulletproof extends RangeProof {
         const y_n = BigIntVector.getVectorToPowerN(y, up, this.order);
         const xsq = Maths.mod(x ** 2n, this.order);
 
-        const leftEq = Utils.getPedersenCommitment(this.tx, this.txbf, this.order, blinGen, valueGen);
+        const leftEq = Utils.getPedersenCommitment(this.dot, this.taux, this.order, blinGen, valueGen);
         const rightEq = V.mul(Utils.toBN(zsq)).add(valueGen.mul(Utils.toBN(ProofUtils.delta(y_n, z, this.order)))).add(this.T1.mul(Utils.toBN(x))).add(this.T2.mul(Utils.toBN(xsq)));
         if (leftEq.eq(rightEq) === false) {
             return false;
@@ -159,7 +155,7 @@ class UncompressedBulletproof extends RangeProof {
         const vecG = PointVector.getVectorShallueVanDeWoestijne('G', up);
         const vecH2 = vecH.multWithBigIntVector(y_ninv);
 
-        const E = blinGen.mul(Utils.toBN(this.e));
+        const E = blinGen.mul(Utils.toBN(this.mu));
         const Einv = E.neg();
         const Bx = Utils.toBN(x);
         const vec_z = BigIntVector.getVectorWithOnlyScalar(z, up, this.order);
@@ -348,9 +344,9 @@ class UncompressedBulletproof extends RangeProof {
             this.S,
             this.T1,
             this.T2,
-            this.tx,
-            this.txbf,
-            this.e,
+            this.dot,
+            this.taux,
+            this.mu,
             a_sum.get(0),
             b_sum.get(0),
             a_sum.get(1),
