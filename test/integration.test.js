@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const EC = require('elliptic').ec;
 const assert = require('assert');
+const BigIntBuffer = require('bigint-buffer');
 
 const CompressedBulletproof = require('../src/CompressedBulletproof');
 const constants = require('../src/Constants');
@@ -24,12 +25,15 @@ describe('Integration Tests with other bulletproof libraries', () => {
         assert(prf.verify(V, 0n, 64n, constants.gens.G, constants.gens.H));
     });
 
-    it('Should create the same bytes then libsec for same input', () => {
-        const value = 140736310644272n;
-        const bf = BigInt('0x2020206920616d206e6f74206120626c696e64696e6720666163746f72202020');
+    it('Should create the pedersen commitment as libsec for same input', () => {
+        const value = 1234n;
+        const bfstr = "   i am not a blinding factor   ";
+        const bfbytes = Buffer.from(bfstr);
+        const bf = BigIntBuffer.toBigIntBE(bfbytes);
+        //const bf = BigInt('0x2020206920616d206e6f74206120626c696e64696e6720666163746f72202020');
 
         const pc = Utils.getPedersenCommitment(value, bf, constants.secp256k1.n, constants.gens.G, constants.gens.H);
-        const V = ec.keyFromPublic("03e5118bd2510e00afb30662e8ce0800fa96521051540a00fbbacb68a9a20f0081", 'hex').pub;
+        const V = ec.keyFromPublic("0264c55f631b81fa2a968cbbafba5451105296fa8cee86206b3afe51d28b11e52c", 'hex').pub;
         assert(pc.eq(V));
     });
 });

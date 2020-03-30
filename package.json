@@ -11,16 +11,17 @@
   ],
   "author": "Jakob Abfalter",
   "license": "ISC",
-  "bugs" : {
-    "url" : "https://github.com/jafalter/bulletproof-js/issues",
-    "email" : "JakobAbfalter@gmail.com"
+  "bugs": {
+    "url": "https://github.com/jafalter/bulletproof-js/issues",
+    "email": "JakobAbfalter@gmail.com"
   },
   "repository": {
-    "type" : "git",
-    "url" : "https://github.com/jafalter/bulletproof-js"
+    "type": "git",
+    "url": "https://github.com/jafalter/bulletproof-js"
   },
   "dependencies": {
     "assert": "^2.0.0",
+    "bigint-buffer": "^1.1.5",
     "bigint-crypto-utils": "^2.3.1",
     "bn": "^1.0.5",
     "elliptic": "^6.5.1",
