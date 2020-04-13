@@ -26,14 +26,37 @@ describe('Integration Tests with other bulletproof libraries', () => {
     });
 
     it('Should create the pedersen commitment as libsec for same input', () => {
-        const value = 1234n;
-        const bfstr = "   i am not a blinding factor   ";
-        const bfbytes = Buffer.from(bfstr);
-        const bf = BigIntBuffer.toBigIntBE(bfbytes);
+        //const value = 1234n;
+        //const bfstr = "   i am not a blinding factor   ";
+        //const bfbytes = Buffer.from(bfstr);
+        //const bf = BigIntBuffer.toBigIntBE(bfbytes);
         //const bf = BigInt('0x2020206920616d206e6f74206120626c696e64696e6720666163746f72202020');
+        const bf = BigInt('0x2020206920616d206e6f74206120626c696e64696e6720666163746f72202020');
+        const value = BigInt('0x00000000000000000000000000000000000000000000000000000000000004d2');
 
         const pc = Utils.getPedersenCommitment(value, bf, constants.secp256k1.n, constants.gens.G, constants.gens.H);
-        const V = ec.keyFromPublic("0264c55f631b81fa2a968cbbafba5451105296fa8cee86206b3afe51d28b11e52c", 'hex').pub;
+        const V = ec.keyFromPublic("0364c55f631b81fa2a968cbbafba5451105296fa8cee86206b3afe51d28b11e52c", 'hex').pub;
+        console.log(V.encode('hex'));
+        console.log(pc.encode('hex'));
         assert(pc.eq(V));
+    });
+
+    it('Test the two generator multiplications in the pedersen commitment', () => {
+       const xBlindGen = ec.keyFromPublic("02744cb23ed3c34c53d86f65457e5dbeafc64eba5cc7988f1ee60578ad8abfde6e", 'hex').pub;
+       const vValueGen = ec.keyFromPublic("02a6fc0f2989491a010ebb901011289f29bcfcb34c11cbec4b7785c1a6b9a1254d", 'hex').pub;
+       const valuegen = constants.gens.H;
+       const blindgen = constants.gens.G;
+
+       const x = BigInt('0x2020206920616d206e6f74206120626c696e64696e6720666163746f72202020');
+       const value = BigInt('0x00000000000000000000000000000000000000000000000000000000000004d2');
+
+       const xBlindGenJS = blindgen.mul(Utils.toBN(x));
+       const vValueGendJS = valuegen.mul(Utils.toBN(value));
+       assert(xBlindGenJS.eq(xBlindGen));
+       assert(vValueGendJS.eq(vValueGen));
+
+       const pcJS = xBlindGenJS.add(vValueGendJS);
+       const pcC = ec.keyFromPublic("0364c55f631b81fa2a968cbbafba5451105296fa8cee86206b3afe51d28b11e52c", 'hex').pub;
+       assert(pcJS.eq(pcC));
     });
 });

@@ -147,6 +147,10 @@ class Utils {
     static getPedersenCommitment(v, x, n=false, blindingGen=constants.gens.H, valueGen=constants.gens.G) {
         const x_BN = Utils.toBN(n ? Maths.mod(x, n) : x);
         const v_BN = Utils.toBN(n ? Maths.mod(v, n) : x);
+
+        console.log("vH " + valueGen.mul(v_BN).encode('hex'));
+        console.log("xG " + blindingGen.mul(x_BN).encode('hex'));
+
         return valueGen.mul(v_BN).add(blindingGen.mul(x_BN))
     }
 
