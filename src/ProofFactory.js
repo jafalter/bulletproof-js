@@ -80,6 +80,12 @@ class ProofFactory {
         // Now val can be represented as val = < vec1, vec2 >
         if( doAssert ) assert(vec1.multVectorToScalar(vec2) === v, "Now val has t obe < vec1, vec2 >");
 
+        // Randomly choosen values
+        const alpha = randomNum(order);
+        const rho = randomNum(order);
+        const tau1 = randomNum(order);
+        const tau2 = randomNum(order);
+
         // To match notation with reference
         const a_L = vec1;
         const a_R = vec1.subScalar(1n);
@@ -87,7 +93,6 @@ class ProofFactory {
         const vecG = PointVector.getVectorShallueVanDeWoestijne('G', upper);
         const vecH = PointVector.getVectorShallueVanDeWoestijne('H', upper);
         // Commit to those values in a pedersen commitment (is needed later)
-        const alpha = randomNum(order);
         const A = Utils.getVectorPedersenCommitment(a_L, a_R, vecG, vecH, alpha, order, blindGen);
         T.addPoint(A);
         if( doAssert ) assert(a_L.multVectorToScalar(a_R) === 0n, "a_L * a_R has to be 0, as a_L can only contain 0, or 1");
@@ -120,7 +125,6 @@ class ProofFactory {
             s_R.addElem(r2);
         }
         // We need to commit to s_L and s_R
-        const rho = randomNum(order);
         const S = Utils.getVectorPedersenCommitment(s_L, s_R, vecG, vecH, rho, order, blindGen);
         T.addPoint(S);
 
@@ -195,11 +199,9 @@ class ProofFactory {
         const t2 = Maths.mod(l1.multVectorToScalar(r1), order);
         const t1 = Maths.mod(l0.addVector(l1).multVectorToScalar(r0.addVector(r1)) - t0 - t2, order);
 
-        const tau1 = randomNum(order);
         const T1 = Utils.getPedersenCommitment(t1, tau1, order, blindGen, valueGen);
         T.addPoint(T1);
 
-        const tau2 = randomNum(order);
         const T2 = Utils.getPedersenCommitment(t2, tau2, order, blindGen, valueGen);
         T.addPoint(T2);
 
