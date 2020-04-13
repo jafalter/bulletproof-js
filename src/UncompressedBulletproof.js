@@ -214,7 +214,10 @@ class UncompressedBulletproof extends RangeProof {
         const intermediateTerms = [];
         let first = true;
 
+        let round = 0;
         while (a_sum.length() > constants.essentials.END_VECTOR_LENGTH) {
+            round++;
+            console.log("In round " + round);
             const a_lo = new BigIntVector(n);
             const b_lo = new BigIntVector(n);
             const G_lo = new PointVector();

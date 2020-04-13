@@ -68,6 +68,31 @@ describe('Integration Tests with other bulletproof libraries', () => {
         const low = 0n;
         const upper = 64n;
         let rindex = -1;
+
+        // Mocked Fiat Shamir challenges
+        process.env.DEBUG_CHALLENGES = true;
+        process.env.FAKE_CHALLENGES = JSON.stringify([
+            '0x842f1f239a2f7b80c4440bf6e13cbce04dbbaf0881b9461562feddb2f1c7dee0', // y
+            '0xfc627bbf2da06d27e4e21fe4c02fa451d37c138a297d61c1d610c31ef4491a4c', // z
+            '0xc48d298bd9d2be7f978a6907806bca9e1fe255e269d53124ec42f78d2046e690', // x
+            '0x842f1f239a2f7b80c4440bf6e13cbce04dbbaf0881b9461562feddb2f1c7dee0', // y
+            '0xfc627bbf2da06d27e4e21fe4c02fa451d37c138a297d61c1d610c31ef4491a4c', // z
+            '0xc48d298bd9d2be7f978a6907806bca9e1fe255e269d53124ec42f78d2046e690', // x
+            '0xbc8828b1ba7fc26a47af1017b4204eb9d9275d98d80554d50494f21125d599c9', // w (ux)
+            '0xddd4b710dfd9de1b3214554b8c8ec0a278c5a37bfa4bffde1d82a25504c10031', // u0
+            '0xbb3bd7e8a6850c4817ab93e75b9f7e5a63cce59f427986b910695ca3d40c5517', // u1
+            '0x7e810d217e36ea0676a7f7a9dab5e0eca71b0c43b79329bfe1a65b2c349accec', // u2
+            '0x76fb781fc1ed625cb5015f47339f425f858b338bdab939f9a0c101d8eac729bb', // u3
+            '0x8cd6b809b8f55d12fccffba09d0a80a78ba06efa7a8bbea6e389c4020c62a355', // u4
+            '0x842f1f239a2f7b80c4440bf6e13cbce04dbbaf0881b9461562feddb2f1c7dee0', // y
+            '0xfc627bbf2da06d27e4e21fe4c02fa451d37c138a297d61c1d610c31ef4491a4c', // z
+            '0xc48d298bd9d2be7f978a6907806bca9e1fe255e269d53124ec42f78d2046e690', // x
+            '0x842f1f239a2f7b80c4440bf6e13cbce04dbbaf0881b9461562feddb2f1c7dee0', // y
+            '0xfc627bbf2da06d27e4e21fe4c02fa451d37c138a297d61c1d610c31ef4491a4c', // z
+            '0xc48d298bd9d2be7f978a6907806bca9e1fe255e269d53124ec42f78d2046e690', // x
+        ]);
+
+        // Mocked randomness
         const randomness = [
             BigInt('0xe3d1b4510b023c0c5bcffd5a85698fc9c59f3be1cbbd5c56b89006b46c4c26f0'), // alpha
             BigInt('0xf61d5d355a1f9f3670108ca96c0c6193ccc93e90a98baef4f3f854217214e402'), // rho

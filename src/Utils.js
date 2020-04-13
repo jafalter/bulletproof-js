@@ -94,9 +94,10 @@ class Utils {
                 this.fakechallenges = JSON.parse(process.env.FAKE_CHALLENGES);
                 this.challenge_index = 0;
             }
-            const x = this.fakechallenges[this.challenge_index];
+            const xhex = this.fakechallenges[this.challenge_index];
+            const x = BigInt(xhex);
+            console.log("Read fake challenge " + xhex + " with index " + this.challenge_index);
             this.challenge_index++;
-            console.log("Read fake challenge " + x);
             return x;
         }
     }
